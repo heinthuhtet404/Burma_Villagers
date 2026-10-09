@@ -1,31 +1,38 @@
 import { Link } from "react-router-dom";
 import { formatPrice } from "../data/products";
+import useTilt from "../hooks/useTilt";
 
 export default function ProductCard({ product }) {
+  const tiltRef = useTilt({ max: 6, scale: 1.015 });
+
   return (
-    <Link to={`/product/${product.id}`} className="product-card">
-      <div className="product-card-image">
-        <img src={product.image} alt={product.name} />
-        {product.isNew && <span className="product-card-badge">NEW</span>}
+    <Link
+      to={`/product/${product.id}`}
+      className="product-card"
+      data-cursor="VIEW"
+    >
+      <div ref={tiltRef} className="product-card-tilt">
+        <div className="product-card-image">
+          {product.isNew && <span className="product-card-badge">NEW</span>}
+          <img src={product.image} alt={product.name} />
+        </div>
       </div>
 
       <div className="product-card-info">
-        <h3 className="product-card-name">{product.name}</h3>
+        <p className="product-card-name">{product.name}</p>
         <p className="product-card-price">
           {formatPrice(product.price, product.currency)}
         </p>
 
-        {product.colors?.length > 0 && (
-          <div className="product-card-colors">
-            {product.colors.map((c, i) => (
-              <span
-                key={i}
-                className="product-card-swatch"
-                style={{ background: c }}
-              />
-            ))}
-          </div>
-        )}
+        <div className="product-card-colors">
+          {product.colors.map((c) => (
+            <span
+              key={c}
+              className="product-card-swatch"
+              style={{ background: c }}
+            />
+          ))}
+        </div>
       </div>
     </Link>
   );

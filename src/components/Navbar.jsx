@@ -1,49 +1,51 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import MenuOverlay from "./MenuOverlay";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="navbar">
-      <div className="container navbar-inner">
-        {/* Mobile: hamburger */}
-        <button
-          className="navbar-burger"
-          aria-label="Menu"
-          onClick={() => setOpen(!open)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
+    <>
+      <header className="navbar">
+        <div className="container navbar-inner">
+          {/* LEFT slot: burger (mobile) + links (desktop) */}
+          <div className="navbar-left">
+            <button
+              className={`navbar-burger ${open ? "is-open" : ""}`}
+              aria-label="Menu"
+              aria-expanded={open}
+              onClick={() => setOpen((v) => !v)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
 
-        {/* Logo */}
-        <Link to="/" className="navbar-logo" onClick={() => setOpen(false)}>
-          BURMA VILLAGERS
-        </Link>
+            <nav className="navbar-links">
+              <Link to="/shop">SHOP</Link>
+              <Link to="/shop">NEW DROP</Link>
+              <Link to="/about">ABOUT</Link>
+            </nav>
+          </div>
 
-        {/* Desktop links */}
-        <nav className="navbar-links">
-          <Link to="/shop">SHOP</Link>
-          <Link to="/shop">NEW DROP</Link>
-          <Link to="/about">ABOUT</Link>
-        </nav>
+          {/* CENTER: logo */}
+          <Link
+            to="/"
+            className="navbar-logo"
+            onClick={() => setOpen(false)}
+          >
+            BURMA VILLAGERS
+          </Link>
 
-        {/* Cart */}
-        <Link to="/cart" className="navbar-cart">
-          CART (0)
-        </Link>
-      </div>
-
-      {/* Mobile menu */}
-      {open && (
-        <div className="navbar-mobile">
-          <Link to="/shop" onClick={() => setOpen(false)}>SHOP</Link>
-          <Link to="/shop" onClick={() => setOpen(false)}>NEW DROP</Link>
-          <Link to="/about" onClick={() => setOpen(false)}>ABOUT</Link>
+          {/* RIGHT: cart */}
+          <Link to="/cart" className="navbar-cart">
+            CART (0)
+          </Link>
         </div>
-      )}
-    </header>
+      </header>
+
+      <MenuOverlay open={open} onClose={() => setOpen(false)} />
+    </>
   );
 }

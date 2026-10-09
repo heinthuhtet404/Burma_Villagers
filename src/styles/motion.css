@@ -1,0 +1,1028 @@
+/* =====================================================================
+   BURMA VILLAGERS — MOTION LAYER (v3.1 · fixed)
+   Subtle · Editorial · Premium · Alive
+   ===================================================================== */
+
+:root {
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 180ms;
+  --dur-base: 320ms;
+  --dur-slow: 620ms;
+}
+
+/* ---------------------------------------------------------------------
+   REDUCED MOTION
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .cursor-dot,
+  .cursor-label,
+  .scroll-progress {
+    display: none !important;
+  }
+}
+
+/* =====================================================================
+   PAGE LOAD
+   ===================================================================== */
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+#root,
+.app-shell {
+  animation: pageFadeIn var(--dur-slow) var(--ease-out-soft) both;
+}
+
+/* =====================================================================
+   SCROLL PROGRESS BAR
+   ===================================================================== */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--color-primary);
+  transform-origin: left center;
+  transform: scaleX(0);
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* =====================================================================
+   CUSTOM CURSOR
+   ===================================================================== */
+/* =====================================================================
+   CUSTOM CURSOR (light + smooth)
+   ===================================================================== */
+.cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  pointer-events: none;
+  z-index: 9999;
+  will-change: transform;
+  opacity: 1;
+  transition: opacity 200ms var(--ease-out-soft);
+  /* NO width/height transitions — those cause layout thrashing */
+}
+
+.cursor-label {
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding: 8px 14px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0;
+  will-change: transform;
+  transition: opacity 220ms var(--ease-out-soft);
+  white-space: nowrap;
+}
+
+.cursor-label.is-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .cursor-dot,
+  .cursor-label { display: none; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body,
+  a,
+  button,
+  [role="button"] { cursor: none; }
+}
+
+/* =====================================================================
+   BACK TO TOP
+   ===================================================================== */
+.back-to-top {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  opacity: 0;
+  transform: translate3d(0, 12px, 0) scale(0.9);
+  pointer-events: none;
+  transition:
+    opacity var(--dur-base) var(--ease-out-soft),
+    transform var(--dur-base) var(--ease-out-soft),
+    box-shadow var(--dur-base) var(--ease-out-soft);
+}
+.back-to-top.is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  pointer-events: auto;
+}
+.back-to-top:hover {
+  transform: translate3d(0, -2px, 0) scale(1.05);
+  box-shadow: 0 8px 24px rgba(9, 62, 24, 0.25);
+}
+.back-to-top:active {
+  transform: translate3d(0, 0, 0) scale(0.95);
+}
+
+/* =====================================================================
+   HERO — split text + entrance + ambient
+   ===================================================================== */
+@keyframes splitCharIn {
+  from { opacity: 0; transform: translate3d(0, 105%, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.split-char {
+  display: inline-block;
+  transform: translate3d(0, 105%, 0);
+  opacity: 0;
+  animation: splitCharIn 900ms var(--ease-out-soft) both;
+  will-change: transform, opacity;
+}
+
+@keyframes heroSubIn {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes heroImageIn {
+  from { opacity: 0; transform: scale(1.06); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes heroAmbient {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -6px, 0); }
+}
+
+@keyframes eyebrowPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+.hero-eyebrow {
+  animation:
+    heroSubIn 700ms var(--ease-out-soft) 60ms both,
+    eyebrowPulse 4s var(--ease-in-out-soft) 1200ms infinite;
+}
+
+.hero-sub {
+  animation: heroSubIn 700ms var(--ease-out-soft) 620ms both;
+}
+
+.hero-cta-wrap {
+  animation: heroSubIn 700ms var(--ease-out-soft) 780ms both;
+  display: inline-block;
+  will-change: transform;
+}
+
+.hero-image {
+  animation: heroImageIn 1100ms var(--ease-out-soft) 120ms both;
+  overflow: hidden;
+  background: var(--color-secondary);
+  position: relative;
+  transition: box-shadow var(--dur-slow) var(--ease-out-soft);
+}
+.hero-image-inner {
+  position: absolute;
+  inset: 0;
+  animation: heroAmbient 8s var(--ease-in-out-soft) 1400ms infinite;
+  will-change: transform;
+}
+.hero-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 900ms var(--ease-out-soft);
+}
+@media (hover: hover) {
+  .hero-image:hover img { transform: scale(1.03); }
+  .hero-image:hover {
+    box-shadow: 0 30px 60px -20px rgba(9, 62, 24, 0.25);
+  }
+}
+
+/* =====================================================================
+   NAVBAR — links, cart, burger
+   ===================================================================== */
+.navbar-links a {
+  position: relative;
+  transition: color var(--dur-fast) var(--ease-out-soft);
+}
+.navbar-links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  height: 1px;
+  width: 100%;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-base) var(--ease-out-soft);
+}
+@media (hover: hover) {
+  .navbar-links a:hover::after,
+  .navbar-links a:focus-visible::after { transform: scaleX(1); }
+}
+
+@keyframes cartPop {
+  0%   { transform: scale(1);    opacity: 1; }
+  40%  { transform: scale(1.18); opacity: 0.85; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.cart-count.is-bumped { animation: cartPop 320ms var(--ease-out-soft); }
+
+.navbar-burger {
+  position: relative;
+  justify-content: center;
+  transition: transform var(--dur-fast) var(--ease-out-soft);
+}
+.navbar-burger:active { transform: scale(0.94); }
+
+.navbar-burger span {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background: var(--color-text);
+  border-radius: 1px;
+  transform-origin: center;
+  transition:
+    transform var(--dur-base) var(--ease-out-soft),
+    opacity var(--dur-fast) var(--ease-out-soft);
+}
+.navbar-burger.is-open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.navbar-burger.is-open span:nth-child(2) { opacity: 0; transform: scaleX(0.4); }
+.navbar-burger.is-open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* (Old .navbar-mobile styles removed — replaced by .menu-overlay) */
+
+/* =====================================================================
+   BUTTONS
+   ===================================================================== */
+.btn {
+  transition:
+    opacity var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-fast) var(--ease-out-soft),
+    box-shadow var(--dur-base) var(--ease-out-soft),
+    background-color var(--dur-fast) var(--ease-out-soft),
+    color var(--dur-fast) var(--ease-out-soft),
+    border-color var(--dur-fast) var(--ease-out-soft);
+  will-change: transform;
+}
+@media (hover: hover) {
+  .btn:hover { transform: translate3d(0, -1px, 0); }
+}
+.btn:active { transform: translate3d(0, 0, 0) scale(0.985); }
+
+@keyframes btnBreathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(9, 62, 24, 0); }
+  50%      { box-shadow: 0 0 0 8px rgba(9, 62, 24, 0.06); }
+}
+.btn-primary { animation: btnBreathe 5s var(--ease-in-out-soft) infinite; }
+
+/* =====================================================================
+   PRODUCT CARDS
+   ===================================================================== */
+.product-card {
+  display: block;
+  color: var(--color-text);
+}
+.product-card-tilt {
+  will-change: transform;
+  transform-style: preserve-3d;
+  transition: transform 260ms var(--ease-out-soft);
+}
+.product-card-image {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--color-secondary);
+  margin-bottom: 16px;
+}
+.product-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 600ms var(--ease-out-soft);
+}
+@media (hover: hover) {
+  .product-card:hover .product-card-image img { transform: scale(1.05); }
+}
+
+.product-card-swatch {
+  transition:
+    transform var(--dur-fast) var(--ease-out-soft),
+    box-shadow var(--dur-fast) var(--ease-out-soft);
+}
+@media (hover: hover) {
+  .product-card:hover .product-card-swatch { transform: scale(1.14); }
+}
+
+@keyframes badgeFade {
+  from { opacity: 0; transform: translate3d(0, -4px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes badgeBreathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.65; }
+}
+.product-card-badge {
+  animation:
+    badgeFade 400ms var(--ease-out-soft) both,
+    badgeBreathe 3.2s var(--ease-in-out-soft) 500ms infinite;
+}
+
+/* =====================================================================
+   PDP — editorial motion
+   ===================================================================== */
+.pdp-image img {
+  transition: opacity 350ms var(--ease-out-soft);
+}
+.pdp-image img.is-switching {
+  opacity: 0;
+}
+
+/* Image index — subtle entrance */
+@keyframes pdpIndexIn {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.pdp-image-index {
+  animation: pdpIndexIn 600ms var(--ease-out-soft) 400ms both;
+}
+
+/* Thumb — subtle scale + border fade on hover */
+.pdp-thumb {
+  transition:
+    border-color var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-fast) var(--ease-out-soft);
+}
+.pdp-thumb:hover {
+  transform: translate3d(0, -2px, 0);
+}
+
+/* Swatch — outline pulse when active */
+@keyframes swatchPulse {
+  0%, 100% { outline-offset: 2px; }
+  50%      { outline-offset: 5px; }
+}
+.pdp-swatch.is-active {
+  animation: swatchPulse 3.6s var(--ease-in-out-soft) infinite;
+}
+
+/* Size cells — sharp press feedback */
+.pdp-size:active {
+  transform: scale(0.97);
+}
+
+/* Add-to-cart pulse */
+@keyframes addPulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.985); }
+  100% { transform: scale(1); }
+}
+.pdp-add.is-added {
+  animation: addPulse 260ms var(--ease-out-soft);
+}
+
+/* Arrow slide on hover */
+.pdp-add-arrow {
+  transition: transform var(--dur-base) var(--ease-out-soft);
+}
+.pdp-add:not(:disabled):hover .pdp-add-arrow {
+  transform: translate3d(6px, 0, 0);
+}
+
+/* Field head — subtle underline slide-in */
+.pdp-field-head {
+  position: relative;
+}
+.pdp-field-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 1px;
+  width: 0;
+  background: var(--color-text);
+  transition: width 500ms var(--ease-out-soft);
+}
+.pdp-field-head.is-engaged::after {
+  width: 100%;
+}
+
+/* Product title chars — reuse .split-char from motion.css */
+.pdp-name .split-char {
+  /* inherits from global split-char */
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .pdp-image-index,
+  .pdp-swatch.is-active,
+  .pdp-add.is-added {
+    animation: none !important;
+  }
+  .pdp-add-arrow,
+  .pdp-thumb {
+    transform: none !important;
+  }
+}
+/* =====================================================================
+   CART
+   ===================================================================== */
+.cart-overlay {
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out-soft);
+}
+.cart-overlay.is-open { opacity: 1; }
+
+.cart-drawer {
+  transform: translate3d(100%, 0, 0);
+  transition: transform var(--dur-base) var(--ease-out-soft);
+}
+.cart-drawer.is-open { transform: translate3d(0, 0, 0); }
+
+@keyframes cartItemIn {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.cart-item { animation: cartItemIn 320ms var(--ease-out-soft) both; }
+
+/* =====================================================================
+   SCROLL REVEAL
+   ===================================================================== */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+  transition:
+    opacity 700ms var(--ease-out-soft),
+    transform 700ms var(--ease-out-soft);
+  will-change: opacity, transform;
+}
+.reveal.is-revealed { opacity: 1; transform: translate3d(0, 0, 0); }
+
+.reveal--story {
+  transform: translate3d(0, 26px, 0);
+  transition-duration: 900ms;
+}
+.reveal--story.is-revealed { transform: translate3d(0, 0, 0); }
+
+.reveal--calm {
+  transform: translate3d(0, 8px, 0);
+  transition-duration: 1100ms;
+}
+
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translate3d(0, 12px, 0);
+  transition:
+    opacity 620ms var(--ease-out-soft),
+    transform 620ms var(--ease-out-soft);
+}
+.reveal-stagger.is-revealed > * {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+.reveal-stagger.is-revealed > *:nth-child(1) { transition-delay: 0ms; }
+.reveal-stagger.is-revealed > *:nth-child(2) { transition-delay: 70ms; }
+.reveal-stagger.is-revealed > *:nth-child(3) { transition-delay: 140ms; }
+.reveal-stagger.is-revealed > *:nth-child(4) { transition-delay: 210ms; }
+.reveal-stagger.is-revealed > *:nth-child(5) { transition-delay: 280ms; }
+.reveal-stagger.is-revealed > *:nth-child(6) { transition-delay: 350ms; }
+
+/* =====================================================================
+   SECTION LINKS + TIKTOK CTA
+   ===================================================================== */
+.section-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color var(--dur-fast) var(--ease-out-soft);
+}
+.section-link::after {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  transition: width var(--dur-base) var(--ease-out-soft);
+}
+@media (hover: hover) {
+  .section-link:hover::after { width: 12px; }
+  .tiktok-cta .btn-primary:hover { transform: translate3d(0, -2px, 0); }
+}
+
+/* =====================================================================
+   MARQUEE
+   ===================================================================== */
+.marquee {
+  overflow: hidden;
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-bg);
+  padding: 22px 0;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+}
+.marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  width: max-content;
+  animation: marqueeScroll linear infinite;
+  will-change: transform;
+}
+@keyframes marqueeScroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+.marquee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 48px;
+  font-family: var(--font-heading);
+  font-size: clamp(18px, 2.2vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.marquee-item:nth-child(even) { color: var(--color-primary); }
+.marquee-dot {
+  font-size: 0.6em;
+  color: var(--color-primary);
+  opacity: 0.6;
+}
+
+/* =====================================================================
+   STORY — parallax wrapper + ambient
+   ===================================================================== */
+.story-image {
+  overflow: hidden;
+  background: var(--color-secondary);
+  aspect-ratio: 4 / 5;
+  position: relative;
+}
+.story-image-inner {
+  position: absolute;
+  inset: -8%;
+  will-change: transform;
+}
+.story-image-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@keyframes storyTitlePulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.85; }
+}
+.story-title { animation: storyTitlePulse 6s var(--ease-in-out-soft) infinite; }
+
+/* =====================================================================
+   BRAND STATEMENT
+   ===================================================================== */
+@keyframes brandBreathe {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -3px, 0); }
+}
+.brand-statement-title {
+  animation: brandBreathe 8s var(--ease-in-out-soft) infinite;
+}
+
+/* =====================================================================
+   ANNOUNCEMENT BAR — soft sweep
+   ===================================================================== */
+@keyframes announcementSweep {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.announcement {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-primary) 0%,
+    var(--color-primary) 40%,
+    var(--color-primary-soft) 50%,
+    var(--color-primary) 60%,
+    var(--color-primary) 100%
+  );
+  background-size: 200% 100%;
+  animation: announcementSweep 8s linear infinite;
+}
+
+/* =====================================================================
+   FULL-SCREEN MENU OVERLAY — editorial · bold
+   ===================================================================== */
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: var(--color-primary);
+  color: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  opacity: 0;
+  pointer-events: none;
+  clip-path: inset(0 0 100% 0);
+  transition:
+    opacity 420ms var(--ease-out-soft),
+    clip-path 700ms var(--ease-out-soft);
+  will-change: opacity, clip-path;
+}
+
+.menu-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  clip-path: inset(0 0 0 0);
+}
+
+body:has(.menu-overlay.is-open) {
+  overflow: hidden;
+}
+
+.menu-overlay-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 68px;
+  border-bottom: 1px solid rgba(245, 243, 236, 0.15);
+}
+
+.menu-overlay-brand {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+.menu-overlay-close {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--dur-fast) var(--ease-out-soft);
+}
+.menu-overlay-close:active { transform: scale(0.9); }
+
+.menu-overlay-close span {
+  position: absolute;
+  width: 24px;
+  height: 2px;
+  background: var(--color-bg);
+  border-radius: 1px;
+  transition: transform var(--dur-base) var(--ease-out-soft);
+}
+.menu-overlay-close span:nth-child(1) { transform: rotate(45deg); }
+.menu-overlay-close span:nth-child(2) { transform: rotate(-45deg); }
+
+@media (hover: hover) {
+  .menu-overlay-close:hover span:nth-child(1) { transform: rotate(135deg); }
+  .menu-overlay-close:hover span:nth-child(2) { transform: rotate(45deg); }
+}
+
+.menu-overlay-nav {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 40px 24px;
+}
+.menu-overlay-nav ul {
+  list-style: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.menu-overlay-item { overflow: hidden; }
+
+.menu-overlay-item a {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 24px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(245, 243, 236, 0.12);
+  color: var(--color-bg);
+  transform: translate3d(0, 110%, 0);
+  opacity: 0;
+  transition:
+    transform 780ms var(--ease-out-soft),
+    opacity 620ms var(--ease-out-soft),
+    color var(--dur-fast) var(--ease-out-soft),
+    padding-left var(--dur-base) var(--ease-out-soft);
+  transition-delay: calc(var(--i) * 90ms + 180ms);
+}
+.menu-overlay-item:last-child a {
+  border-bottom: 1px solid rgba(245, 243, 236, 0.12);
+}
+.menu-overlay.is-open .menu-overlay-item a {
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .menu-overlay-item a:hover {
+    color: var(--color-secondary);
+    padding-left: 12px;
+  }
+  .menu-overlay-item a:hover .menu-overlay-arrow {
+    transform: translate3d(8px, 0, 0);
+    opacity: 1;
+  }
+}
+
+.menu-overlay-meta {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--color-secondary);
+  opacity: 0.7;
+  align-self: flex-start;
+  margin-top: 12px;
+}
+
+.menu-overlay-label {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: clamp(48px, 10vw, 120px);
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.menu-overlay-arrow {
+  font-family: var(--font-heading);
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 600;
+  opacity: 0;
+  transform: translate3d(-12px, 0, 0);
+  transition:
+    transform var(--dur-base) var(--ease-out-soft),
+    opacity var(--dur-base) var(--ease-out-soft);
+  align-self: center;
+}
+
+.menu-overlay-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 32px;
+  padding: 32px 24px 40px;
+  border-top: 1px solid rgba(245, 243, 236, 0.15);
+  opacity: 0;
+  transform: translate3d(0, 20px, 0);
+  transition:
+    opacity 500ms var(--ease-out-soft) 620ms,
+    transform 500ms var(--ease-out-soft) 620ms;
+}
+.menu-overlay.is-open .menu-overlay-bottom {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.menu-overlay-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+.menu-overlay-col--end {
+  align-items: flex-end;
+  text-align: right;
+}
+.menu-overlay-col-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--color-secondary);
+  opacity: 0.6;
+  margin-bottom: 4px;
+}
+.menu-overlay-col a {
+  color: var(--color-bg);
+  transition: opacity var(--dur-fast) var(--ease-out-soft);
+}
+.menu-overlay-col a:hover { opacity: 0.7; }
+
+@media (max-width: 900px) {
+  .menu-overlay-nav { padding: 24px; }
+  .menu-overlay-item a {
+    gap: 16px;
+    padding: 16px 0;
+  }
+  .menu-overlay-label { font-size: clamp(40px, 14vw, 64px); }
+  .menu-overlay-meta { margin-top: 6px; }
+  .menu-overlay-arrow { display: none; }
+  .menu-overlay-bottom {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 24px 24px 32px;
+  }
+  .menu-overlay-col--end {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+/* =====================================================================
+   REDUCED MOTION — kill all loops
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal-stagger > * {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .hero-image,
+  .hero-image-inner,
+  .hero-eyebrow,
+  .hero-sub,
+  .hero-cta-wrap,
+  .split-char,
+  .pdp-image,
+  .pdp-image-inner,
+  .story-image-inner,
+  .story-title,
+  .brand-statement-title,
+  .announcement,
+  .btn-primary,
+  .product-card-badge,
+  .pdp-swatch.is-active,
+  .marquee-track,
+  .menu-overlay,
+  .menu-overlay-item a,
+  .menu-overlay-bottom {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+  }
+}
+
+/* =====================================================================
+   FOOTER — Quiet Edge motion
+   ===================================================================== */
+
+/* Dot pulse — used in top bar + signature */
+@keyframes footerDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.75); }
+}
+
+/* Ticker — infinite horizontal scroll */
+@keyframes footerTickerScroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+/* Column links — reinforced transition (already in index.css) */
+.footer-col-list a {
+  transition:
+    padding-left var(--dur-base) var(--ease-out-soft),
+    color var(--dur-fast) var(--ease-out-soft);
+}
+
+/* Reduced motion — Footer */
+@media (prefers-reduced-motion: reduce) {
+  .footer-top-dot,
+  .footer-ticker-track,
+  .footer-signature-dot {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* =====================================================================
+   ABOUT — Manifesto motion
+   ===================================================================== */
+
+/* Dot pulse in eyebrow */
+@keyframes aboutDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* Outline title — subtle shimmer */
+@keyframes aboutOutlineShimmer {
+  0%, 100% {
+    -webkit-text-stroke-color: var(--color-primary);
+    opacity: 1;
+  }
+  50% {
+    -webkit-text-stroke-color: var(--color-primary-soft);
+    opacity: 0.9;
+  }
+}
+
+.about-title-line--outline {
+  animation: aboutOutlineShimmer 6s var(--ease-in-out-soft) infinite;
+}
+
+/* Big number pulse — very slow */
+@keyframes aboutNumPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.75; }
+}
+
+.about-principle-num {
+  animation: aboutNumPulse 5s var(--ease-in-out-soft) infinite;
+}
+
+/* Title dot — gentle breathe */
+@keyframes aboutTitleDotBreathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+.about-title-dot {
+  animation: aboutTitleDotBreathe 3.2s var(--ease-in-out-soft) infinite;
+}
+
+/* Fabric section — 350 GSM subtle drift */
+@keyframes aboutSubDrift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -4px, 0); }
+}
+
+.about-sub {
+  animation: aboutSubDrift 9s var(--ease-in-out-soft) infinite;
+}
+
+/* CTA arrow slide — reinforced */
+.about-cta-btn:hover .about-cta-arrow {
+  transform: translate3d(6px, 0, 0);
+}
+
+/* Reduced motion — About */
+@media (prefers-reduced-motion: reduce) {
+  .about-title-line--outline,
+  .about-principle-num,
+  .about-title-dot,
+  .about-sub,
+  .about-dot {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    -webkit-text-stroke-color: var(--color-primary);
+  }
+}
