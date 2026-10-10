@@ -1026,3 +1026,219 @@ body:has(.menu-overlay.is-open) {
     -webkit-text-stroke-color: var(--color-primary);
   }
 }
+
+/* =====================================================================
+   CART — motion
+   ===================================================================== */
+
+@keyframes cartItemIn {
+  from {
+    opacity: 0;
+    transform: translate3d(12px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes toastDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* Cart count bump — reinforced */
+.cart-count.is-bumped {
+  animation: cartPop 320ms var(--ease-out-soft);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .cart-item,
+  .toast-dot {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .cart-drawer,
+  .cart-overlay,
+  .toast {
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* =====================================================================
+   NEW DROP — motion
+   ===================================================================== */
+
+/* Top ticker */
+@keyframes dropTickerScroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+/* Status dot pulse */
+@keyframes dropStatusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* Low stock badge pulse */
+@keyframes dropLowPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+/* Hero image ambient float */
+@keyframes dropHeroFloat {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -6px, 0); }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .drop-ticker-track,
+  .drop-hero-status-dot,
+  .drop-card-low,
+  .drop-hero-image-inner {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* =====================================================================
+   CHECKOUT / SEARCH / SIZE GUIDE — motion
+   ===================================================================== */
+
+/* Search overlay links — subtle stagger */
+@keyframes searchResultIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.search-results li {
+  opacity: 0;
+  animation: searchResultIn 420ms var(--ease-out-soft) both;
+}
+
+.search-results li:nth-child(1) { animation-delay: 0ms; }
+.search-results li:nth-child(2) { animation-delay: 60ms; }
+.search-results li:nth-child(3) { animation-delay: 120ms; }
+.search-results li:nth-child(4) { animation-delay: 180ms; }
+.search-results li:nth-child(5) { animation-delay: 240ms; }
+.search-results li:nth-child(6) { animation-delay: 300ms; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .search-results li,
+  .confirmation-dot {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .search-overlay,
+  .size-guide,
+  .size-guide-overlay {
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* =====================================================================
+   404 — NOT FOUND motion
+   ===================================================================== */
+
+/* Ticker */
+@keyframes notfoundTickerScroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+/* Meta dot pulse */
+@keyframes notfoundDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.7); }
+}
+
+/* 404 digits — entrance */
+@keyframes notfoundDigitIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 40px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.notfound-code-digit {
+  opacity: 0;
+  animation: notfoundDigitIn 900ms var(--ease-out-soft) both;
+}
+
+.notfound-code-digit:nth-child(1) { animation-delay: 100ms; }
+.notfound-code-digit:nth-child(2) { animation-delay: 240ms; }
+.notfound-code-digit:nth-child(3) { animation-delay: 380ms; }
+
+/* Middle digit — subtle drift (ambient) */
+@keyframes notfoundMiddleDrift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -6px, 0); }
+}
+
+.notfound-code-digit--outline {
+  animation:
+    notfoundDigitIn 900ms var(--ease-out-soft) 240ms both,
+    notfoundMiddleDrift 6s var(--ease-in-out-soft) 1400ms infinite;
+}
+
+/* Outline shimmer */
+@keyframes notfoundOutlineShimmer {
+  0%, 100% {
+    -webkit-text-stroke-color: var(--color-primary);
+    opacity: 1;
+  }
+  50% {
+    -webkit-text-stroke-color: var(--color-primary-soft);
+    opacity: 0.85;
+  }
+}
+
+.notfound-code-digit--outline {
+  animation:
+    notfoundDigitIn 900ms var(--ease-out-soft) 240ms both,
+    notfoundMiddleDrift 6s var(--ease-in-out-soft) 1400ms infinite,
+    notfoundOutlineShimmer 4.5s var(--ease-in-out-soft) 1400ms infinite;
+}
+
+/* Eyebrow line — expand on load */
+@keyframes notfoundLineIn {
+  from { width: 0; }
+  to   { width: 32px; }
+}
+
+.notfound-eyebrow-line {
+  animation: notfoundLineIn 700ms var(--ease-out-soft) 500ms both;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .notfound-ticker-track,
+  .notfound-meta-dot,
+  .notfound-code-digit,
+  .notfound-code-digit--outline,
+  .notfound-eyebrow-line {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    width: 32px;
+  }
+}

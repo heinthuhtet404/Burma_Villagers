@@ -1,14 +1,16 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import { useCart } from "../context/CartContext";
 
 const LINKS = [
-  { to: "/shop", label: "SHOP",      meta: "01" },
-  { to: "/shop", label: "NEW DROP",  meta: "02" },
-  { to: "/about", label: "ABOUT",    meta: "03" },
+  { to: "/shop", label: "SHOP", meta: "01" },
+  { to: "/new-drop", label: "NEW DROP", meta: "02" },
+  { to: "/about", label: "ABOUT", meta: "03" },
 ];
 
-export default function MenuOverlay({ open, onClose }) {
+export default function MenuOverlay({ open, onClose, onCartOpen }) {
   const panelRef = useRef(null);
+  const { count } = useCart();
 
   // Lock body scroll when open
   useEffect(() => {
@@ -29,13 +31,18 @@ export default function MenuOverlay({ open, onClose }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  const handleCartClick = () => {
+    if (onCartOpen) onCartOpen();
+    else onClose();
+  };
+
   return (
     <div
       ref={panelRef}
       className={`menu-overlay ${open ? "is-open" : ""}`}
       aria-hidden={!open}
     >
-      {/* Top bar inside overlay: close + brand mark */}
+      {/* Top bar */}
       <div className="menu-overlay-top container">
         <span className="menu-overlay-brand">BURMA VILLAGERS</span>
         <button
@@ -64,10 +71,33 @@ export default function MenuOverlay({ open, onClose }) {
               </Link>
             </li>
           ))}
+
+          {/* Cart item — mobile-only row */}
+          <li
+            className="menu-overlay-item menu-overlay-item--cart"
+            style={{ "--i": LINKS.length }}
+          >
+            <button
+              type="button"
+              onClick={handleCartClick}
+              className="menu-overlay-cart-btn"
+            >
+              <span className="menu-overlay-meta">04</span>
+              <span className="menu-overlay-label">
+                CART
+                {count > 0 && (
+                  <span className="menu-overlay-cart-count">
+                    ({count})
+                  </span>
+                )}
+              </span>
+              <span className="menu-overlay-arrow" aria-hidden="true">→</span>
+            </button>
+          </li>
         </ul>
       </nav>
 
-      {/* Bottom meta — brutalist/editorial corner info */}
+      {/* Bottom meta */}
       <div className="menu-overlay-bottom container">
         <div className="menu-overlay-col">
           <span className="menu-overlay-col-title">FOLLOW</span>

@@ -5,7 +5,7 @@ export default function Footer() {
 
   const navItems = [
     { id: "01", label: "ALL PRODUCTS", to: "/shop" },
-    { id: "02", label: "NEW DROP", to: "/shop" },
+    { id: "02", label: "NEW DROP", to: "/new-drop" },
     { id: "03", label: "OUR STORY", to: "/about" },
     { id: "04", label: "CONTACT", to: "/about" },
   ];

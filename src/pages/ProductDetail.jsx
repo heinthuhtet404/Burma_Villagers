@@ -1,21 +1,27 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { products, formatPrice } from "../data/products";
+import { products, formatPrice, getProductStatus } from "../data/products";
+import { useCart } from "../context/CartContext";
 import SplitText from "../components/SplitText";
+import SizeGuide from "../components/SizeGuide";
 
 export default function ProductDetail() {
   const { id } = useParams();
   const product = products.find((p) => p.id === id) || products[0];
+  const status = getProductStatus(product);
+  const isSold = status === "sold";
+
+  const { add } = useCart();
 
   const [color, setColor] = useState(product.colors[0]);
   const [size, setSize] = useState(null);
   const [switching, setSwitching] = useState(false);
   const [added, setAdded] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const switchTimer = useRef(null);
   const addTimer = useRef(null);
 
-  // Reset variant state on route change
   useEffect(() => {
     setColor(product.colors[0]);
     setSize(null);
@@ -40,17 +46,16 @@ export default function ProductDetail() {
   };
 
   const handleAddToCart = () => {
-    if (!size) return;
+    if (!size || isSold) return;
+    add(product, { size, color, qty: 1 });
     setAdded(true);
     clearTimeout(addTimer.current);
     addTimer.current = setTimeout(() => setAdded(false), 300);
-    // TODO: dispatch add-to-cart
   };
 
   return (
     <section className="pdp">
       <div className="container">
-        {/* Breadcrumb — editorial numbered */}
         <nav className="pdp-breadcrumb">
           <Link to="/">HOME</Link>
           <span className="pdp-breadcrumb-sep">/</span>
@@ -60,9 +65,6 @@ export default function ProductDetail() {
         </nav>
 
         <div className="pdp-inner">
-          {/* =====================
-              LEFT: Image + index
-              ===================== */}
           <div className="pdp-media">
             <div className="pdp-image">
               <div className="pdp-image-inner">
@@ -72,22 +74,26 @@ export default function ProductDetail() {
                   alt={product.name}
                 />
               </div>
-              {product.isNew && (
+
+              {product.isNew && !isSold && (
                 <span className="product-card-badge">NEW</span>
               )}
+              {isSold && (
+                <span className="pdp-sold-overlay">SOLD OUT</span>
+              )}
 
-              {/* Vertical index marker — brutalist */}
               <span className="pdp-image-index">
                 {String(activeImg + 1).padStart(2, "0")} / 01
               </span>
             </div>
 
-            {/* Thumbnail strip (single image for now) */}
             <div className="pdp-thumbs">
               {[0].map((i) => (
                 <button
                   key={i}
-                  className={`pdp-thumb ${activeImg === i ? "is-active" : ""}`}
+                  className={`pdp-thumb ${
+                    activeImg === i ? "is-active" : ""
+                  }`}
                   onClick={() => setActiveImg(i)}
                   aria-label={`View image ${i + 1}`}
                 >
@@ -97,9 +103,6 @@ export default function ProductDetail() {
             </div>
           </div>
 
-          {/* =====================
-              RIGHT: Info
-              ===================== */}
           <div className="pdp-info">
             <p className="pdp-eyebrow">350 GSM AIR LAYER</p>
 
@@ -113,7 +116,24 @@ export default function ProductDetail() {
 
             <p className="pdp-desc">{product.description}</p>
 
-            {/* Color — full-width row, brutalist numbered */}
+            {!isSold && (
+              <div className="pdp-stock">
+                <p className="pdp-stock-label">
+                  {product.stock} / {product.total} IN STOCK
+                </p>
+                <div className="pdp-stock-bar">
+                  <div
+                    className="pdp-stock-fill"
+                    style={{
+                      transform: `scaleX(${
+                        product.stock / product.total
+                      })`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="pdp-field">
               <div className="pdp-field-head">
                 <span className="pdp-field-label">COLOR</span>
@@ -134,18 +154,26 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* Size — grid cells, brutalist */}
             <div className="pdp-field">
               <div className="pdp-field-head">
                 <span className="pdp-field-label">SIZE</span>
-                {size && <span className="pdp-field-value">{size}</span>}
+                <button
+                  type="button"
+                  className="pdp-size-guide-link"
+                  onClick={() => setSizeGuideOpen(true)}
+                >
+                  SIZE GUIDE →
+                </button>
               </div>
               <div className="pdp-sizes">
                 {product.sizes.map((s) => (
                   <button
                     key={s}
-                    className={`pdp-size ${size === s ? "is-active" : ""}`}
+                    className={`pdp-size ${
+                      size === s ? "is-active" : ""
+                    }`}
                     onClick={() => setSize(s)}
+                    disabled={isSold}
                   >
                     {s}
                   </button>
@@ -153,17 +181,25 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* Add to cart — full-width brutal CTA */}
             <button
-              className={`btn btn-primary pdp-add ${added ? "is-added" : ""}`}
-              disabled={!size}
+              className={`btn btn-primary pdp-add ${
+                added ? "is-added" : ""
+              }`}
+              disabled={!size || isSold}
               onClick={handleAddToCart}
             >
-              <span>{size ? "ADD TO CART" : "SELECT A SIZE"}</span>
-              <span className="pdp-add-arrow" aria-hidden="true">→</span>
+              <span>
+                {isSold
+                  ? "SOLD OUT"
+                  : size
+                  ? "ADD TO BAG"
+                  : "SELECT A SIZE"}
+              </span>
+              {!isSold && (
+                <span className="pdp-add-arrow" aria-hidden="true">→</span>
+              )}
             </button>
 
-            {/* Meta */}
             <div className="pdp-meta">
               <p>Free delivery within Yangon.</p>
               <p>Heavy feel. Clean look. Everyday wear.</p>
@@ -171,6 +207,12 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      {/* Size Guide Modal */}
+      <SizeGuide
+        open={sizeGuideOpen}
+        onClose={() => setSizeGuideOpen(false)}
+      />
     </section>
   );
 }
