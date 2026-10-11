@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { supabase } from "./lib/supabase";
 import AnnouncementBar from "./components/AnnouncementBar";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -42,6 +44,46 @@ function AnimatedRoutes() {
 }
 
 export default function App() {
+  // 🔌 Supabase connection test (remove after confirming it works)
+  useEffect(() => {
+    console.log("🔌 Supabase URL:", import.meta.env.VITE_SUPABASE_URL);
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error("❌ Supabase connection error:", error);
+      } else {
+        console.log("✅ Supabase connected. Session:", data.session);
+      }
+    });
+  }, []);
+
+  // inside App():
+  useEffect(() => {
+    async function testFetch() {
+      console.log("🔌 Testing Supabase...");
+
+      const { data, error } = await supabase
+        .from("products")
+        .select(`
+        id,
+        slug,
+        name,
+        price,
+        variants (size, color, color_name, stock)
+      `);
+
+      if (error) {
+        console.error("❌ Error:", error);
+        return;
+      }
+
+      console.log("✅ Products fetched:", data);
+      console.log(`Found ${data.length} products`);
+    }
+
+    testFetch();
+  }, []);
+
   return (
     <BrowserRouter>
       <ThemeProvider>
