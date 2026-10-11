@@ -1,16 +1,17 @@
 @import url(https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap);
 
+/* ============================================
+   THEME — LIGHT (default)
+   ============================================ */
 :root {
-  /* ============================================
-     Color — Burma Villagers palette (v2)
-     ============================================ */
-  --color-primary: #093e18;         /* deep forest green */
-  --color-primary-soft: #0f5423;    /* hover / darker accent */
-  --color-secondary: #c9c6bc;       /* warm stone */
-  --color-bg: #F5F3EC;              /* warm ivory (kept) */
-  --color-bg-soft: #EDEAE1;         /* subtle panel tone */
-  --color-text: #111311;            /* near black */
-  --color-muted: #77786F;           /* muted stone */
+  /* Color — Light */
+  --color-primary: #093e18;
+  --color-primary-soft: #0f5423;
+  --color-secondary: #c9c6bc;
+  --color-bg: #F5F3EC;
+  --color-bg-soft: #EDEAE1;
+  --color-text: #111311;
+  --color-muted: #77786F;
   --color-white: #FFFFFF;
   --color-line: rgba(17, 19, 17, 0.08);
   --color-line-strong: rgba(17, 19, 17, 0.15);
@@ -22,17 +23,67 @@
   /* Layout */
   --max-width: 1280px;
   --gutter: 24px;
-
-  /* Radius — minimal */
   --radius-sm: 2px;
   --radius-md: 4px;
 
-  /* Motion tokens — safe fallback (motion.css also declares them) */
+  /* Motion tokens */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
   --dur-fast: 180ms;
   --dur-base: 320ms;
   --dur-slow: 620ms;
+
+  /* Theme transition */
+  color-scheme: light;
+}
+
+/* ============================================
+   THEME — DARK
+   ============================================ */
+[data-theme="dark"] {
+  --color-primary: #4a9b5e;
+  --color-primary-soft: #3d8550;
+  --color-secondary: #8a8779;
+  --color-bg: #0f110f;
+  --color-bg-soft: #181a18;
+  --color-text: #EDEAE1;
+  --color-muted: #8a8c84;
+  --color-white: #FFFFFF;
+  --color-line: rgba(237, 234, 225, 0.08);
+  --color-line-strong: rgba(237, 234, 225, 0.18);
+
+  color-scheme: dark;
+}
+
+/* ============================================
+   THEME TRANSITION — smooth color swap
+   ============================================ */
+html {
+  transition:
+    background-color var(--dur-base) var(--ease-out-soft),
+    color var(--dur-base) var(--ease-out-soft);
+}
+
+body {
+  transition:
+    background-color var(--dur-base) var(--ease-out-soft),
+    color var(--dur-base) var(--ease-out-soft);
+}
+
+/* Prevent FOUC (flash) — color changes apply instantly to bg */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-out-soft);
+}
+
+/* But respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  html,
+  body {
+    transition: none !important;
+  }
 }
 
 * {
@@ -224,7 +275,7 @@ button {
   white-space: nowrap;
   background: none;
   border: none;
-  cursor: pointer;
+  /* cursor: pointer; */
 }
 
 .navbar-cart:hover {
@@ -246,7 +297,7 @@ button {
   padding: 6px 4px;
   background: none;
   border: none;
-  cursor: pointer;
+  /* cursor: pointer; */
 }
 
 .navbar-search:hover {
@@ -1309,7 +1360,7 @@ a.footer-meta-val:hover {
 }
 
 .pdp-add:disabled {
-  background: rgba(17, 19, 17, 0.08);
+  background: var(--color-line);
   color: var(--color-muted);
   cursor: not-allowed;
 }
@@ -3114,30 +3165,7 @@ a.footer-meta-val:hover {
   color: var(--color-muted);
 }
 
-/* =====================
-   NAVBAR — search button
-   ===================== */
-.navbar-right {
-  justify-self: end;
-  display: inline-flex;
-  align-items: center;
-  gap: 20px;
-}
 
-.navbar-search {
-  font-family: var(--font-heading);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text);
-  transition: color var(--dur-fast) var(--ease-out-soft);
-}
-.navbar-search:hover { color: var(--color-primary); }
-
-@media (max-width: 480px) {
-  .navbar-search { display: none; }
-}
 
 /* =====================
    SEARCH OVERLAY
@@ -4560,5 +4588,171 @@ a.footer-meta-val:hover {
   .menu-overlay-cart-btn {
     gap: 16px;
     padding: 16px 0;
+  }
+}
+
+/* =====================
+   THEME TOGGLE
+   ===================== */
+.navbar-theme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--color-text);
+  transition:
+    color var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-fast) var(--ease-out-soft);
+  background: none;
+  border: none;
+  /* cursor: pointer; */
+  padding: 0;
+}
+
+.navbar-theme:hover {
+  color: var(--color-primary);
+  transform: rotate(15deg);
+}
+
+.navbar-theme:active {
+  transform: rotate(15deg) scale(0.92);
+}
+
+.navbar-theme-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.navbar-theme-icon svg {
+  width: 100%;
+  height: 100%;
+  transition: transform var(--dur-base) var(--ease-out-soft);
+}
+
+@media (max-width: 480px) {
+  .navbar-theme {
+    width: 28px;
+    height: 28px;
+  }
+  .navbar-theme-icon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* =====================
+   PAGE TRANSITION
+   ===================== */
+
+/* Base content — always visible unless stage class applies */
+.page-content {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  transition:
+    opacity 380ms var(--ease-out-soft),
+    transform 380ms var(--ease-out-soft);
+  will-change: opacity, transform;
+}
+
+/* Exit — fade out + slide up */
+.page-content.is-exiting {
+  opacity: 0;
+  transform: translate3d(0, -12px, 0);
+}
+
+/* Enter — fade in + slide up (from below) */
+.page-content.is-entering {
+  opacity: 0;
+  transform: translate3d(0, 12px, 0);
+  /* Force a repaint frame before transitioning to idle */
+  animation: pageEnter 380ms var(--ease-out-soft) forwards;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* =====================
+   Curtain overlay
+   ===================== */
+.page-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  background: var(--color-primary);
+  transform: translate3d(0, 100%, 0);
+  transition: transform 480ms var(--ease-out-soft);
+  will-change: transform;
+}
+
+.page-curtain.is-covering {
+  transform: translate3d(0, 0, 0);
+  pointer-events: auto;
+}
+
+.page-curtain.is-uncovering {
+  transform: translate3d(0, -100%, 0);
+  pointer-events: auto;
+}
+
+.page-curtain-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-curtain-mark {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: clamp(24px, 4vw, 48px);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-bg);
+  opacity: 0;
+  transform: translate3d(0, 12px, 0);
+  transition:
+    opacity 320ms var(--ease-out-soft),
+    transform 320ms var(--ease-out-soft);
+}
+
+.page-curtain.is-covering .page-curtain-mark {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  transition-delay: 180ms;
+}
+
+.page-curtain.is-uncovering .page-curtain-mark {
+  opacity: 0;
+  transform: translate3d(0, -12px, 0);
+  transition-delay: 0ms;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .page-content,
+  .page-curtain,
+  .page-curtain-mark {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+  .page-content.is-exiting,
+  .page-content.is-entering {
+    opacity: 1;
+    transform: none;
+    animation: none;
   }
 }

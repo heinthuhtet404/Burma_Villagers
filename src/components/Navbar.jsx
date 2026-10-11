@@ -4,6 +4,7 @@ import MenuOverlay from "./MenuOverlay";
 import CartIcon from "./CartIcon";
 import CartDrawer from "./CartDrawer";
 import SearchOverlay from "./SearchOverlay";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -12,7 +13,6 @@ export default function Navbar() {
 
   const openCartFromMenu = () => {
     setMenuOpen(false);
-    // Small delay so menu close animation plays first
     setTimeout(() => setCartOpen(true), 200);
   };
 
@@ -43,11 +43,14 @@ export default function Navbar() {
             to="/"
             className="navbar-logo"
             onClick={() => setMenuOpen(false)}
+            aria-label="Burma Villagers — Home"
           >
             BURMA VILLAGERS
           </Link>
 
           <div className="navbar-right">
+            <ThemeToggle />
+
             <button
               className="navbar-search"
               aria-label="Search"

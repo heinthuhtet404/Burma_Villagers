@@ -4,7 +4,11 @@ import SplitText from "./SplitText";
 import useMagnetic from "../hooks/useMagnetic";
 
 export default function Hero() {
-  const ctaRef = useMagnetic({ strength: 0.4, radius: 120 });
+  const ctaRef = useMagnetic({
+    strength: 0.4,
+    radius: 120,
+    cursorPull: 0.15,
+  });
 
   return (
     <section className="hero">
