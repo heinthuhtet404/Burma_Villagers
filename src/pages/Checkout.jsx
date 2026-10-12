@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
-import { formatPrice } from "../data/products";
+import { useAuth } from "../context/AuthContext";
+import { formatPrice } from "../lib/format";
+import { createOrder } from "../lib/orders";
+import { getAddresses } from "../lib/account";
 
 const DELIVERY = {
   standard: {
@@ -33,6 +36,7 @@ const STEPS = [
 
 export default function Checkout() {
   const { items, subtotal, count, clear } = useCart();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
@@ -44,14 +48,70 @@ export default function Checkout() {
     city: "Yangon",
     notes: "",
   });
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [delivery, setDelivery] = useState("standard");
-  const [payment, setPayment] = useState(null); // ← no default — user must select
+  const [payment, setPayment] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const deliveryFee = DELIVERY[delivery].price;
   const total = subtotal + deliveryFee;
 
-  const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  /* ============================================================
+     Auto-fill from profile + addresses (if signed in)
+     ============================================================ */
+  useEffect(() => {
+    if (!user) return;
+
+    // Pre-fill from profile
+    setForm((f) => ({
+      ...f,
+      name: f.name || profile?.name || "",
+      email: f.email || user.email || "",
+      phone: f.phone || profile?.phone || "",
+    }));
+
+    // Load saved addresses
+    getAddresses(user.id)
+      .then((list) => {
+        setAddresses(list);
+        // Auto-select default address
+        const defaultAddr = list.find((a) => a.is_default);
+        if (defaultAddr) {
+          applyAddress(defaultAddr);
+          setSelectedAddressId(defaultAddr.id);
+        } else if (list.length > 0) {
+          applyAddress(list[0]);
+          setSelectedAddressId(list[0].id);
+        }
+      })
+      .catch((err) => console.warn("addresses load:", err));
+    // eslint-disable-next-line
+  }, [user, profile]);
+
+  const applyAddress = (addr) => {
+    setForm((f) => ({
+      ...f,
+      name: addr.name,
+      phone: addr.phone,
+      address: addr.address,
+      city: addr.city,
+    }));
+  };
+
+  const handleSelectAddress = (addr) => {
+    applyAddress(addr);
+    setSelectedAddressId(addr.id);
+  };
+
+  const update = (k, v) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    // Unselect address when manually editing
+    if (k === "address" || k === "city" || k === "name" || k === "phone") {
+      setSelectedAddressId(null);
+    }
+  };
 
   const isInfoValid =
     form.name.trim() &&
@@ -62,7 +122,7 @@ export default function Checkout() {
   const canProceed = () => {
     if (step === 1) return isInfoValid;
     if (step === 2) return !!delivery;
-    if (step === 3) return !!payment; // ← require payment selection
+    if (step === 3) return !!payment;
     return true;
   };
 
@@ -75,38 +135,48 @@ export default function Checkout() {
     setStep((s) => Math.max(s - 1, 1));
   };
 
-  const handlePlaceOrder = (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (step !== 4) return;
     if (!isInfoValid || !payment || count === 0) return;
 
     setSubmitting(true);
+    setError("");
 
-    const order = {
-      id: `BV-${Date.now().toString().slice(-8)}`,
-      items,
-      subtotal,
-      deliveryFee,
-      total,
-      form,
-      delivery,
-      payment,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const order = await createOrder({
+        customer: form,
+        items,
+        delivery,
+        payment,
+        subtotal,
+        deliveryFee,
+        total,
+        userId: user?.id || null,  // ← link to account
+      });
 
-    setTimeout(() => {
       try {
-        sessionStorage.setItem("bv-last-order", JSON.stringify(order));
+        sessionStorage.setItem(
+          "bv-last-order",
+          JSON.stringify({ orderNumber: order.orderNumber })
+        );
       } catch {
         /* ignore */
       }
+
       clear();
-      navigate("/order-confirmation");
-    }, 700);
+      navigate("/order-confirmation", { replace: true });
+    } catch (err) {
+      console.error("Order failed:", err);
+      setError(
+        err.message || "Failed to place order. Please try again."
+      );
+      setSubmitting(false);
+    }
   };
 
   // Empty cart guard
-  if (count === 0) {
+  if (count === 0 && !submitting) {
     return (
       <section className="checkout">
         <div className="container checkout-empty">
@@ -138,6 +208,16 @@ export default function Checkout() {
           <span className="pdp-breadcrumb-current">CHECKOUT</span>
         </nav>
 
+        {/* Sign-in prompt for guests */}
+        {!user && (
+          <div className="checkout-signin-prompt">
+            <p>
+              Already have an account?{" "}
+              <Link to="/login">Sign in</Link> for faster checkout.
+            </p>
+          </div>
+        )}
+
         <div className="checkout-inner">
           <form className="checkout-form" onSubmit={handlePlaceOrder}>
             <header className="checkout-head">
@@ -148,7 +228,6 @@ export default function Checkout() {
                 YOUR ORDER.
               </h1>
 
-              {/* Step indicator — 4 steps */}
               <div className="checkout-steps">
                 {STEPS.map((s) => (
                   <button
@@ -158,7 +237,6 @@ export default function Checkout() {
                       step >= s.n ? "is-active" : ""
                     } ${step === s.n ? "is-current" : ""}`}
                     onClick={() => {
-                      // Can only jump back to previous steps
                       if (s.n < step) setStep(s.n);
                     }}
                     disabled={s.n > step}
@@ -176,6 +254,50 @@ export default function Checkout() {
                 <p className="checkout-section-title">
                   01 — CONTACT & ADDRESS
                 </p>
+
+                {/* Saved addresses (if signed in + has addresses) */}
+                {user && addresses.length > 0 && (
+                  <div className="checkout-addresses">
+                    <p className="checkout-addresses-title">
+                      SAVED ADDRESSES
+                    </p>
+                    <div className="checkout-addresses-list">
+                      {addresses.map((a) => (
+                        <button
+                          type="button"
+                          key={a.id}
+                          className={`checkout-address-card ${
+                            selectedAddressId === a.id ? "is-active" : ""
+                          }`}
+                          onClick={() => handleSelectAddress(a)}
+                        >
+                          <div className="checkout-address-head">
+                            <span className="checkout-address-label">
+                              {a.label}
+                            </span>
+                            {a.is_default && (
+                              <span className="checkout-address-badge">
+                                DEFAULT
+                              </span>
+                            )}
+                          </div>
+                          <p className="checkout-address-body">
+                            <strong>{a.name}</strong>
+                            <br />
+                            {a.address}
+                            <br />
+                            {a.city}
+                            <br />
+                            {a.phone}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="checkout-addresses-hint">
+                      Or edit below to use a different address.
+                    </p>
+                  </div>
+                )}
 
                 <div className="checkout-field">
                   <label className="checkout-label" htmlFor="name">
@@ -381,16 +503,18 @@ export default function Checkout() {
                     </p>
                   </div>
                 </div>
+
+                {error && <p className="admin-form-error">{error}</p>}
               </div>
             )}
 
-            {/* Nav */}
             <div className="checkout-nav">
               {step > 1 && (
                 <button
                   type="button"
                   className="checkout-back"
                   onClick={handleBack}
+                  disabled={submitting}
                 >
                   ← BACK
                 </button>
@@ -423,7 +547,6 @@ export default function Checkout() {
             </div>
           </form>
 
-          {/* Summary */}
           <aside className="checkout-summary">
             <div className="checkout-summary-head">
               <p className="checkout-summary-title">ORDER SUMMARY</p>

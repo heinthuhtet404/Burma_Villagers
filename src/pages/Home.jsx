@@ -1,19 +1,33 @@
+import { useEffect, useRef } from "react";
 import Hero from "../components/Hero";
 import ProductCard from "../components/ProductCard";
 import ScrollMarquee from "../components/ScrollMarquee";
-import { products } from "../data/products";
 import { Link } from "react-router-dom";
 import storyImg from "../images/story.jpg";
 import useScrollReveal from "../hooks/useScrollReveal";
 import useParallax from "../hooks/useParallax";
+import useProducts from "../hooks/useProducts";
 
 export default function Home() {
-  const newDropRef  = useScrollReveal();
-  const gridRef     = useScrollReveal({ threshold: 0.05 });
-  const storyRef    = useScrollReveal({ threshold: 0.2 });
-  const brandRef    = useScrollReveal({ threshold: 0.3 });
-  const tiktokRef   = useScrollReveal({ threshold: 0.2 });
+  const newDropRef = useScrollReveal();
+  const storyRef = useScrollReveal({ threshold: 0.2 });
+  const brandRef = useScrollReveal({ threshold: 0.3 });
+  const tiktokRef = useScrollReveal({ threshold: 0.2 });
   const storyImgRef = useParallax({ speed: 0.12 });
+  const gridRef = useRef(null);
+
+  const { products, loading, error } = useProducts({ onlyNew: true });
+
+  // 🎯 Reveal grid as soon as products are rendered
+  useEffect(() => {
+    if (loading || products.length === 0) return;
+    const el = gridRef.current;
+    if (!el) return;
+
+    requestAnimationFrame(() => {
+      el.classList.add("is-revealed");
+    });
+  }, [loading, products.length]);
 
   return (
     <>
@@ -27,16 +41,31 @@ export default function Home() {
               <p className="section-eyebrow">NEW DROP</p>
               <h2 className="section-title">350 GSM AIR LAYER</h2>
             </div>
-            <Link to="/shop" className="section-link">
+            <Link to="/new-drop" className="section-link">
               VIEW ALL →
             </Link>
           </div>
 
-          <div ref={gridRef} className="product-grid reveal-stagger">
-            {products.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
+          {loading && (
+            <p className="section-loading">Loading products…</p>
+          )}
+
+          {error && (
+            <p className="section-error">
+              Failed to load products. Please refresh.
+            </p>
+          )}
+
+          {!loading && !error && (
+            <div
+              ref={gridRef}
+              className="product-grid reveal-stagger"
+            >
+              {products.slice(0, 4).map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

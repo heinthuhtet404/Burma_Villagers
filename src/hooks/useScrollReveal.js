@@ -1,13 +1,11 @@
 import { useEffect, useRef } from "react";
 
-/**
- * Adds `.is-revealed` when the element enters the viewport.
- * All motion defined in CSS — this hook only toggles a class.
- */
 export default function useScrollReveal({
   threshold = 0.15,
   rootMargin = "0px 0px -10% 0px",
   once = true,
+  watchChildren = false,
+  fallbackDelay = 900,
 } = {}) {
   const ref = useRef(null);
 
@@ -15,9 +13,16 @@ export default function useScrollReveal({
     const el = ref.current;
     if (!el) return;
 
-    // Respect reduced motion — show immediately
+    const reveal = (target) => target.classList.add("is-revealed");
+
+    const revealAll = () => {
+      reveal(el);
+      el.querySelectorAll(".reveal, .reveal-stagger").forEach(reveal);
+    };
+
+    // Reduced motion → instant
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      el.classList.add("is-revealed");
+      revealAll();
       return;
     }
 
@@ -25,7 +30,7 @@ export default function useScrollReveal({
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add("is-revealed");
+            reveal(entry.target);
             if (once) observer.unobserve(entry.target);
           } else if (!once) {
             entry.target.classList.remove("is-revealed");
@@ -36,8 +41,37 @@ export default function useScrollReveal({
     );
 
     observer.observe(el);
-    return () => observer.disconnect();
-  }, [threshold, rootMargin, once]);
+
+    // Watch children (for async grids)
+    if (watchChildren) {
+      const children = el.children;
+      for (let i = 0; i < children.length; i++) observer.observe(children[i]);
+    }
+
+    // Watch for new children
+    let mutationObserver;
+    if (watchChildren && typeof MutationObserver !== "undefined") {
+      mutationObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === 1) observer.observe(node);
+          });
+        });
+      });
+      mutationObserver.observe(el, { childList: true });
+    }
+
+    // 🛡️ Fallback — reveal after delay regardless
+    const fallback = setTimeout(() => {
+      if (!el.classList.contains("is-revealed")) revealAll();
+    }, fallbackDelay);
+
+    return () => {
+      observer.disconnect();
+      mutationObserver?.disconnect();
+      clearTimeout(fallback);
+    };
+  }, [threshold, rootMargin, once, watchChildren, fallbackDelay]);
 
   return ref;
 }

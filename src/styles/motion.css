@@ -579,6 +579,7 @@ body:has(textarea:focus) .cursor-dot {
   transition-duration: 1100ms;
 }
 
+/* Stagger children — reveal when PARENT is revealed */
 .reveal-stagger > * {
   opacity: 0;
   transform: translate3d(0, 12px, 0);
@@ -586,10 +587,13 @@ body:has(textarea:focus) .cursor-dot {
     opacity 620ms var(--ease-out-soft),
     transform 620ms var(--ease-out-soft);
 }
+
+/* When parent has .is-revealed → children animate */
 .reveal-stagger.is-revealed > * {
   opacity: 1;
   transform: translate3d(0, 0, 0);
 }
+
 .reveal-stagger.is-revealed > *:nth-child(1) { transition-delay: 0ms; }
 .reveal-stagger.is-revealed > *:nth-child(2) { transition-delay: 70ms; }
 .reveal-stagger.is-revealed > *:nth-child(3) { transition-delay: 140ms; }

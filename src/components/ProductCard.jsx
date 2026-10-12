@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { formatPrice, getProductStatus } from "../data/products";
+import { formatPrice } from "../lib/format";
+import { getProductStatus } from "../lib/products";
 import useTilt from "../hooks/useTilt";
 
 export default function ProductCard({ product }) {
@@ -9,7 +10,7 @@ export default function ProductCard({ product }) {
 
   return (
     <Link
-      to={isSold ? "#" : `/product/${product.id}`}
+      to={isSold ? "#" : `/product/${product.slug}`}
       className={`product-card ${isSold ? "is-sold" : ""}`}
       data-cursor={isSold ? "SOLD" : "VIEW"}
       onClick={(e) => {

@@ -5,6 +5,7 @@ import CartIcon from "./CartIcon";
 import CartDrawer from "./CartDrawer";
 import SearchOverlay from "./SearchOverlay";
 import ThemeToggle from "./ThemeToggle";
+import UserMenu from "./UserMenu";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -84,6 +85,8 @@ export default function Navbar() {
                 </svg>
               </span>
             </button>
+
+            <UserMenu />
 
             <CartIcon
               onClick={() => setCartOpen(true)}

@@ -10,7 +10,6 @@ export default function PageTransition({ children }) {
 
   useEffect(() => {
     if (location.pathname === displayLocation.pathname) {
-      // Same route — no transition
       return;
     }
 
@@ -23,10 +22,22 @@ export default function PageTransition({ children }) {
       setStage("in");
     }, TRANSITION_MS);
 
-    // 3. Return to idle (after enter animation finishes)
+    // 3. Return to idle + force reveal any missed grids
     const t2 = setTimeout(() => {
       setStage("idle");
-    }, TRANSITION_MS + 380); // enter animation is 420ms → wait a bit longer
+
+      // 🎯 Force reveal any reveal elements currently in viewport
+      requestAnimationFrame(() => {
+        document
+          .querySelectorAll(".reveal, .reveal-stagger")
+          .forEach((el) => {
+            const rect = el.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+              el.classList.add("is-revealed");
+            }
+          });
+      });
+    }, TRANSITION_MS + 380);
 
     return () => {
       clearTimeout(t1);

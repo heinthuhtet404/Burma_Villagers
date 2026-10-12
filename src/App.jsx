@@ -1,8 +1,7 @@
-import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import { supabase } from "./lib/supabase";
+import { AuthProvider } from "./context/AuthContext";
 import AnnouncementBar from "./components/AnnouncementBar";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -12,6 +11,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import BackToTop from "./components/BackToTop";
 import Toast from "./components/Toast";
 import PageTransition from "./components/PageTransition";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import NewDrop from "./pages/NewDrop";
@@ -20,6 +20,31 @@ import About from "./pages/About";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import NotFound from "./pages/NotFound";
+
+// Auth
+import Login from "./pages/auth/Login";
+import Signup from "./pages/auth/Signup";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
+
+// Account
+import AccountLayout from "./pages/account/AccountLayout";
+import AccountOverview from "./pages/account/AccountOverview";
+import AccountOrders from "./pages/account/AccountOrders";
+import AccountOrderDetail from "./pages/account/AccountOrderDetail";
+import AccountAddresses from "./pages/account/AccountAddresses";
+import AccountSettings from "./pages/account/AccountSettings";
+
+// Admin
+import AdminLayout from "./admin/AdminLayout";
+import AdminProtected from "./admin/AdminProtected";
+import AdminLogin from "./admin/pages/AdminLogin";
+import AdminDashboard from "./admin/pages/AdminDashboard";
+import AdminProducts from "./admin/pages/AdminProducts";
+import AdminProductNew from "./admin/pages/AdminProductNew";
+import AdminProductEdit from "./admin/pages/AdminProductEdit";
+import AdminOrders from "./admin/pages/AdminOrders";
+import AdminOrderDetail from "./admin/pages/AdminOrderDetail";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -33,73 +58,90 @@ function AnimatedRoutes() {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/about" element={<About />} />
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/order-confirmation" element={<OrderConfirmation />} />
+
+        {/* Auth */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* Account */}
         <Route
-          path="/order-confirmation"
-          element={<OrderConfirmation />}
-        />
+          path="/account"
+          element={
+            <ProtectedRoute>
+              <AccountLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AccountOverview />} />
+          <Route path="orders" element={<AccountOrders />} />
+          <Route path="orders/:id" element={<AccountOrderDetail />} />
+          <Route path="addresses" element={<AccountAddresses />} />
+          <Route path="settings" element={<AccountSettings />} />
+        </Route>
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </PageTransition>
   );
 }
 
+function AdminRoutes() {
+  return (
+    <Routes>
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route
+        path="/admin"
+        element={
+          <AdminProtected>
+            <AdminLayout />
+          </AdminProtected>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="products" element={<AdminProducts />} />
+        <Route path="products/new" element={<AdminProductNew />} />
+        <Route path="products/:id" element={<AdminProductEdit />} />
+        <Route path="orders" element={<AdminOrders />} />
+        <Route path="orders/:id" element={<AdminOrderDetail />} />
+      </Route>
+    </Routes>
+  );
+}
+
 export default function App() {
-  // 🔌 Supabase connection test (remove after confirming it works)
-  useEffect(() => {
-    console.log("🔌 Supabase URL:", import.meta.env.VITE_SUPABASE_URL);
+  const isAdminRoute = window.location.pathname.startsWith("/admin");
 
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (error) {
-        console.error("❌ Supabase connection error:", error);
-      } else {
-        console.log("✅ Supabase connected. Session:", data.session);
-      }
-    });
-  }, []);
-
-  // inside App():
-  useEffect(() => {
-    async function testFetch() {
-      console.log("🔌 Testing Supabase...");
-
-      const { data, error } = await supabase
-        .from("products")
-        .select(`
-        id,
-        slug,
-        name,
-        price,
-        variants (size, color, color_name, stock)
-      `);
-
-      if (error) {
-        console.error("❌ Error:", error);
-        return;
-      }
-
-      console.log("✅ Products fetched:", data);
-      console.log(`Found ${data.length} products`);
-    }
-
-    testFetch();
-  }, []);
+  if (isAdminRoute) {
+    return (
+      <BrowserRouter>
+        <AuthProvider>
+          <AdminRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+    );
+  }
 
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <CartProvider>
-          <ScrollToTop />
-          <ScrollProgress />
-          <CustomCursor />
-          <AnnouncementBar />
-          <Navbar />
-          <main>
-            <AnimatedRoutes />
-          </main>
-          <Footer />
-          <BackToTop />
-          <Toast />
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <ScrollToTop />
+            <ScrollProgress />
+            <CustomCursor />
+            <AnnouncementBar />
+            <Navbar />
+            <main>
+              <AnimatedRoutes />
+            </main>
+            <Footer />
+            <BackToTop />
+            <Toast />
+          </CartProvider>
+        </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

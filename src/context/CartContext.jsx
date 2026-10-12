@@ -1,5 +1,9 @@
-import { createContext, useContext, useEffect, useReducer } from "react";
-import { products } from "../data/products";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useReducer,
+} from "react";
 
 const CartContext = createContext(null);
 
@@ -10,8 +14,7 @@ function cartReducer(state, action) {
     case "ADD": {
       const { product, size, color, qty = 1 } = action.payload;
 
-      // 🚫 Block sold-out items
-      if (!product || product.stock <= 0) return state;
+      if (!product) return state;
 
       const key = `${product.id}-${size}-${color}`;
       const existing = state.find((item) => item.key === key);
@@ -29,6 +32,7 @@ function cartReducer(state, action) {
         {
           key,
           id: product.id,
+          slug: product.slug,           // ✅ add slug
           name: product.name,
           price: product.price,
           currency: product.currency,
@@ -81,17 +85,6 @@ export function CartProvider({ children }) {
       /* ignore */
     }
   }, [items]);
-
-  // 🔁 Re-check stock on hydrate — remove items that have since sold out
-  useEffect(() => {
-    const stillValid = items.filter((item) => {
-      const current = products.find((p) => p.id === item.id);
-      return current && current.stock > 0;
-    });
-    if (stillValid.length !== items.length) {
-      dispatch({ type: "HYDRATE", payload: stillValid });
-    }
-  }, []); // eslint-disable-line
 
   const add = (product, { size, color, qty = 1 }) =>
     dispatch({ type: "ADD", payload: { product, size, color, qty } });

@@ -175,3 +175,62 @@ export async function searchProducts(query) {
 
   return (data || []).map(normalizeProduct);
 }
+
+
+/* ============================================================
+   GET VARIANT STOCK (real-time check)
+   ============================================================ */
+export async function getVariantStock(productId) {
+  const { data, error } = await supabase
+    .from("variants")
+    .select("size, color, stock")
+    .eq("product_id", productId);
+
+  if (error) throw error;
+
+  return (data || []).reduce((acc, v) => {
+    acc[`${v.size}-${v.color}`] = v.stock;
+    return acc;
+  }, {});
+}
+
+/* ============================================================
+   GET LOW STOCK PRODUCTS (admin)
+   ============================================================ */
+export async function getLowStockProducts(threshold = 5) {
+  const { data, error } = await supabase
+    .from("products")
+    .select(`
+      id,
+      slug,
+      name,
+      is_active,
+      variants (id, size, color, color_name, stock)
+    `)
+    .eq("is_active", true);
+
+  if (error) throw error;
+
+  return (data || [])
+    .map((p) => {
+      const totalStock = (p.variants || []).reduce(
+        (sum, v) => sum + (v.stock || 0),
+        0
+      );
+      const lowVariants = (p.variants || []).filter(
+        (v) => v.stock > 0 && v.stock <= threshold
+      );
+      const outOfStock = (p.variants || []).filter(
+        (v) => v.stock === 0
+      );
+      return {
+        id: p.id,
+        slug: p.slug,
+        name: p.name,
+        totalStock,
+        lowVariants,
+        outOfStock,
+      };
+    })
+    .filter((p) => p.totalStock <= threshold);
+}

@@ -1,15 +1,32 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import DropHero from "../components/DropHero";
-import { currentDrop, pastDrops, resolveDrop } from "../data/drops";
-import { formatPrice, getProductStatus } from "../data/products";
+import useProducts from "../hooks/useProducts";
 import useScrollReveal from "../hooks/useScrollReveal";
+import { formatPrice } from "../lib/format";
+import { getProductStatus } from "../lib/products";
+
+const DROP_NUMBER = "001";
+const DROP_NAME = "350 GSM AIR LAYER";
+const DROP_TAGLINE = "HEAVY. CLEAN. EVERYDAY.";
 
 export default function NewDrop() {
-  const drop = resolveDrop(currentDrop);
   const headerRef = useScrollReveal();
-  const gridRef = useScrollReveal({ threshold: 0.05 });
   const notifyRef = useScrollReveal({ threshold: 0.2 });
-  const archiveRef = useScrollReveal({ threshold: 0.2 });
+  const gridRef = useRef(null);
+
+  const { products, loading, error } = useProducts({ onlyNew: true });
+
+  // 🎯 Reveal grid as soon as products are rendered
+  useEffect(() => {
+    if (loading || products.length === 0) return;
+    const el = gridRef.current;
+    if (!el) return;
+
+    requestAnimationFrame(() => {
+      el.classList.add("is-revealed");
+    });
+  }, [loading, products.length]);
 
   return (
     <section className="new-drop-page">
@@ -18,11 +35,11 @@ export default function NewDrop() {
         <div className="drop-ticker-track">
           {Array.from({ length: 6 }).map((_, i) => (
             <span key={i} className="drop-ticker-item">
-              DROP {drop.number}
+              DROP {DROP_NUMBER}
               <span className="drop-ticker-dot">•</span>
               LIVE NOW
               <span className="drop-ticker-dot">•</span>
-              {drop.name}
+              {DROP_NAME}
               <span className="drop-ticker-dot">•</span>
             </span>
           ))}
@@ -30,94 +47,100 @@ export default function NewDrop() {
       </div>
 
       {/* Hero */}
-      <DropHero drop={drop} />
+      <DropHero
+        drop={{
+          number: DROP_NUMBER,
+          name: DROP_NAME,
+          tagline: DROP_TAGLINE,
+          products,
+          loading,
+        }}
+      />
 
       {/* Header */}
       <div ref={headerRef} className="container drop-header reveal">
         <div>
           <p className="section-eyebrow">THE COLLECTION</p>
           <h2 className="drop-header-title">
-            {drop.items.length} PIECES.
+            {products.length} PIECES.
             <br />
             ONE FABRIC.
           </h2>
         </div>
-        <p className="drop-header-meta">
-          {drop.releaseDate.toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          })}{" "}
-          · YANGON
-        </p>
+        <p className="drop-header-meta">YANGON</p>
       </div>
 
       {/* Items grid */}
-      <div ref={gridRef} className="container drop-grid reveal-stagger">
-        {drop.items.map((item, i) => {
-          const status = getProductStatus(item);
-          const isSold = status === "sold";
-          const pct = Math.round((item.stock / item.total) * 100);
+      {loading && (
+        <p className="section-loading container">Loading…</p>
+      )}
 
-          return (
-            <Link
-              key={item.id}
-              to={isSold ? "#" : `/product/${item.id}`}
-              className={`drop-card ${isSold ? "is-sold" : ""}`}
-              data-cursor={isSold ? "SOLD" : "VIEW"}
-              onClick={(e) => {
-                if (isSold) e.preventDefault();
-              }}
-              aria-disabled={isSold}
-            >
-              <div className="drop-card-image">
-                <img src={item.image} alt={item.name} />
-                <span className="drop-card-num">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+      {!loading && !error && (
+        <div
+          ref={gridRef}
+          className="container drop-grid reveal-stagger"
+        >
+          {products.map((item, i) => {
+            const status = getProductStatus(item);
+            const isSold = status === "sold";
+            const pct = item.stock > 0 ? 100 : 0;
 
-                {isSold && <span className="drop-card-sold">SOLD OUT</span>}
-                {status === "low" && !isSold && (
-                  <span className="drop-card-low">LOW STOCK</span>
-                )}
-              </div>
+            return (
+              <Link
+                key={item.id}
+                to={isSold ? "#" : `/product/${item.slug}`}
+                className={`drop-card ${isSold ? "is-sold" : ""}`}
+                data-cursor={isSold ? "SOLD" : "VIEW"}
+                onClick={(e) => {
+                  if (isSold) e.preventDefault();
+                }}
+                aria-disabled={isSold}
+              >
+                <div className="drop-card-image">
+                  <img src={item.image} alt={item.name} />
+                  <span className="drop-card-num">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
 
-              <div className="drop-card-info">
-                <div className="drop-card-info-top">
-                  <p className="drop-card-colorway">
-                    {item.colors[0] === "#111311"
-                      ? "BLACK"
-                      : item.colors[0] === "#F5F3EC"
-                      ? "IVORY"
-                      : item.colors[0] === "#1D4020"
-                      ? "FOREST"
-                      : "STONE"}
-                  </p>
-                  <p className="drop-card-price">
-                    {formatPrice(item.price, item.currency)}
-                  </p>
+                  {isSold && (
+                    <span className="drop-card-sold">SOLD OUT</span>
+                  )}
+                  {status === "low" && !isSold && (
+                    <span className="drop-card-low">LOW STOCK</span>
+                  )}
                 </div>
 
-                <p className="drop-card-name">{item.name}</p>
-
-                {!isSold && (
-                  <div className="drop-card-stock">
-                    <div className="drop-card-stock-bar">
-                      <div
-                        className="drop-card-stock-fill"
-                        style={{ transform: `scaleX(${pct / 100})` }}
-                      />
-                    </div>
-                    <p className="drop-card-stock-label">
-                      {item.stock} / {item.total}
+                <div className="drop-card-info">
+                  <div className="drop-card-info-top">
+                    <p className="drop-card-colorway">
+                      {item.colorNames[0]?.name || "—"}
+                    </p>
+                    <p className="drop-card-price">
+                      {formatPrice(item.price, item.currency)}
                     </p>
                   </div>
-                )}
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+
+                  <p className="drop-card-name">{item.name}</p>
+
+                  {!isSold && (
+                    <div className="drop-card-stock">
+                      <div className="drop-card-stock-bar">
+                        <div
+                          className="drop-card-stock-fill"
+                          style={{ transform: `scaleX(${pct / 100})` }}
+                        />
+                      </div>
+                      <p className="drop-card-stock-label">
+                        {item.stock} IN STOCK
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       {/* Notify */}
       <div ref={notifyRef} className="drop-notify reveal reveal--story">
@@ -150,27 +173,6 @@ export default function NewDrop() {
             </button>
           </form>
         </div>
-      </div>
-
-      {/* Archive */}
-      <div ref={archiveRef} className="container drop-archive reveal">
-        <div className="drop-archive-head">
-          <p className="section-eyebrow">ARCHIVE</p>
-          <h2 className="drop-archive-title">PAST DROPS</h2>
-        </div>
-
-        <ul className="drop-archive-list">
-          {pastDrops.map((d) => (
-            <li key={d.id} className="drop-archive-item">
-              <span className="drop-archive-num">№ {d.number}</span>
-              <span className="drop-archive-name">{d.name}</span>
-              <span className="drop-archive-date">{d.date}</span>
-              <span className="drop-archive-status">
-                {d.status.toUpperCase()}
-              </span>
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   );
