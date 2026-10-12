@@ -1,25 +1,16 @@
 import { Link } from "react-router-dom";
-import { formatPrice, getProductStatus } from "../data/products";
+import { formatPrice } from "../lib/format";
+import { getProductStatus } from "../lib/products";
 import Countdown from "./Countdown";
 
 export default function DropHero({ drop }) {
-  const {
-    heroProduct,
-    number,
-    name,
-    tagline,
-    description,
-    releaseDate,
-    status,
-  } = drop;
+  const { number, name, tagline, products = [], loading } = drop;
 
-  if (!heroProduct) return null;
+  const hero = products[0];
 
-  const heroStatus = getProductStatus(heroProduct);
+  const heroStatus = hero ? getProductStatus(hero) : "available";
   const isSold = heroStatus === "sold";
-  const remainingPct = Math.round(
-    (heroProduct.stock / heroProduct.total) * 100
-  );
+  const remainingPct = hero ? Math.min((hero.stock / 50) * 100, 100) : 0;
 
   return (
     <section className="drop-hero">
@@ -27,7 +18,7 @@ export default function DropHero({ drop }) {
         <div className="drop-hero-text">
           <div className="drop-hero-status">
             <span className="drop-hero-status-dot" />
-            {status === "live" ? "LIVE NOW" : "UPCOMING"}
+            LIVE NOW
           </div>
 
           <p className="drop-hero-eyebrow">
@@ -45,34 +36,33 @@ export default function DropHero({ drop }) {
               ))}
           </h1>
 
-          <p className="drop-hero-desc">{description}</p>
-
-          {status === "upcoming" && (
-            <div className="drop-hero-countdown">
-              <p className="drop-hero-countdown-label">DROPS IN</p>
-              <Countdown target={releaseDate.getTime()} />
-            </div>
-          )}
+          <p className="drop-hero-desc">
+            The first drop from Burma Villagers. Four colorways of our
+            signature 350 GSM air layer tee — built for structure, made
+            for everyday wear.
+          </p>
 
           <div className="drop-hero-actions">
-            <Link
-              to={isSold ? "#" : `/product/${heroProduct.id}`}
-              className="btn btn-primary drop-hero-cta"
-              onClick={(e) => isSold && e.preventDefault()}
-              aria-disabled={isSold}
-            >
-              <span>
-                {isSold ? "SOLD OUT" : `SHOP DROP ${number}`}
-              </span>
-              {!isSold && (
-                <span className="drop-hero-cta-arrow">→</span>
-              )}
-            </Link>
+            {hero && (
+              <Link
+                to={isSold ? "#" : `/product/${hero.slug}`}
+                className="btn btn-primary drop-hero-cta"
+                onClick={(e) => isSold && e.preventDefault()}
+                aria-disabled={isSold}
+              >
+                <span>
+                  {isSold ? "SOLD OUT" : `SHOP DROP ${number}`}
+                </span>
+                {!isSold && (
+                  <span className="drop-hero-cta-arrow">→</span>
+                )}
+              </Link>
+            )}
 
-            {!isSold && (
+            {hero && !isSold && (
               <div className="drop-hero-stock">
                 <p className="drop-hero-stock-label">
-                  {heroProduct.stock} / {heroProduct.total} REMAINING
+                  {hero.stock} IN STOCK
                 </p>
                 <div className="drop-hero-stock-bar">
                   <div
@@ -85,17 +75,19 @@ export default function DropHero({ drop }) {
           </div>
         </div>
 
-        <div className="drop-hero-image">
-          <div className="drop-hero-image-inner">
-            <img src={heroProduct.image} alt={heroProduct.name} />
+        {hero && (
+          <div className="drop-hero-image">
+            <div className="drop-hero-image-inner">
+              <img src={hero.image} alt={hero.name} />
+            </div>
+
+            <span className="drop-hero-image-badge">
+              FEATURED — DROP {number}
+            </span>
+
+            <span className="drop-hero-image-index">№ {number} / 001</span>
           </div>
-
-          <span className="drop-hero-image-badge">
-            FEATURED — DROP {number}
-          </span>
-
-          <span className="drop-hero-image-index">№ {number} / 001</span>
-        </div>
+        )}
       </div>
     </section>
   );

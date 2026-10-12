@@ -1,32 +1,42 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { products, formatPrice, getProductStatus } from "../data/products";
 import { useCart } from "../context/CartContext";
+import useProduct from "../hooks/useProduct";
 import SplitText from "../components/SplitText";
 import SizeGuide from "../components/SizeGuide";
+import { formatPrice } from "../lib/format";
+import { getProductStatus } from "../lib/products";
+import { getVariantStock } from "../lib/products";
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const product = products.find((p) => p.id === id) || products[0];
-  const status = getProductStatus(product);
-  const isSold = status === "sold";
+  const { product, loading, error } = useProduct(id);
 
   const { add } = useCart();
 
-  const [color, setColor] = useState(product.colors[0]);
+  const [color, setColor] = useState(null);
   const [size, setSize] = useState(null);
   const [switching, setSwitching] = useState(false);
   const [added, setAdded] = useState(false);
-  const [activeImg, setActiveImg] = useState(0);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const switchTimer = useRef(null);
   const addTimer = useRef(null);
+  // Add near the top of component
+  const [variantStock, setVariantStock] = useState(null);
 
+  // When product loads
   useEffect(() => {
-    setColor(product.colors[0]);
-    setSize(null);
-    setActiveImg(0);
-  }, [product.id]);
+    if (!product?.id) return;
+    getVariantStock(product.id).then(setVariantStock).catch(() => { });
+  }, [product?.id]);
+
+  // Reset selections when product changes
+  useEffect(() => {
+    if (product) {
+      setColor(product.colors[0] || null);
+      setSize(null);
+    }
+  }, [product?.id]);
 
   useEffect(() => {
     return () => {
@@ -35,19 +45,71 @@ export default function ProductDetail() {
     };
   }, []);
 
+  if (loading) {
+    return (
+      <section className="pdp">
+        <div className="container">
+          <p className="pdp-loading">Loading…</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <section className="pdp">
+        <div className="container">
+          <p className="pdp-loading">Product not found.</p>
+          <Link to="/shop" className="btn btn-primary">
+            BACK TO SHOP →
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
+  const status = getProductStatus(product);
+  const isSold = status === "sold";
+
+  // Find variants matching current color
+  const colorVariants = product.variants.filter(
+    (v) => v.color === color
+  );
+
+  // Sizes available for current color (with stock)
+  const sizeStock = new Map(
+    colorVariants.map((v) => [v.size, v.stock])
+  );
+
+  // Selected size stock
+  const selectedVariant = colorVariants.find((v) => v.size === size);
+  const canAdd = selectedVariant && selectedVariant.stock > 0 && !isSold;
+
   const handleColorChange = (nextColor) => {
     if (nextColor === color) return;
     setSwitching(true);
     clearTimeout(switchTimer.current);
     switchTimer.current = setTimeout(() => {
       setColor(nextColor);
+      setSize(null); // reset size when color changes
       setSwitching(false);
     }, 180);
   };
 
   const handleAddToCart = () => {
-    if (!size || isSold) return;
-    add(product, { size, color, qty: 1 });
+    if (!canAdd) return;
+
+    add(
+      {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        currency: product.currency,
+        image: product.image,
+      },
+      { size, color, qty: 1 }
+    );
+
     setAdded(true);
     clearTimeout(addTimer.current);
     addTimer.current = setTimeout(() => setAdded(false), 300);
@@ -82,24 +144,7 @@ export default function ProductDetail() {
                 <span className="pdp-sold-overlay">SOLD OUT</span>
               )}
 
-              <span className="pdp-image-index">
-                {String(activeImg + 1).padStart(2, "0")} / 01
-              </span>
-            </div>
-
-            <div className="pdp-thumbs">
-              {[0].map((i) => (
-                <button
-                  key={i}
-                  className={`pdp-thumb ${
-                    activeImg === i ? "is-active" : ""
-                  }`}
-                  onClick={() => setActiveImg(i)}
-                  aria-label={`View image ${i + 1}`}
-                >
-                  <img src={product.image} alt="" />
-                </button>
-              ))}
+              <span className="pdp-image-index">01 / 01</span>
             </div>
           </div>
 
@@ -119,21 +164,23 @@ export default function ProductDetail() {
             {!isSold && (
               <div className="pdp-stock">
                 <p className="pdp-stock-label">
-                  {product.stock} / {product.total} IN STOCK
+                  {product.stock} IN STOCK
                 </p>
                 <div className="pdp-stock-bar">
                   <div
                     className="pdp-stock-fill"
                     style={{
-                      transform: `scaleX(${
-                        product.stock / product.total
-                      })`,
+                      transform: `scaleX(${Math.min(
+                        product.stock / 50,
+                        1
+                      )})`,
                     }}
                   />
                 </div>
               </div>
             )}
 
+            {/* Color */}
             <div className="pdp-field">
               <div className="pdp-field-head">
                 <span className="pdp-field-label">COLOR</span>
@@ -143,9 +190,8 @@ export default function ProductDetail() {
                 {product.colors.map((c) => (
                   <button
                     key={c}
-                    className={`pdp-swatch ${
-                      color === c ? "is-active" : ""
-                    }`}
+                    className={`pdp-swatch ${color === c ? "is-active" : ""
+                      }`}
                     style={{ background: c }}
                     onClick={() => handleColorChange(c)}
                     aria-label={`Color ${c}`}
@@ -154,6 +200,7 @@ export default function ProductDetail() {
               </div>
             </div>
 
+            {/* Size */}
             <div className="pdp-field">
               <div className="pdp-field-head">
                 <span className="pdp-field-label">SIZE</span>
@@ -166,36 +213,40 @@ export default function ProductDetail() {
                 </button>
               </div>
               <div className="pdp-sizes">
-                {product.sizes.map((s) => (
-                  <button
-                    key={s}
-                    className={`pdp-size ${
-                      size === s ? "is-active" : ""
-                    }`}
-                    onClick={() => setSize(s)}
-                    disabled={isSold}
-                  >
-                    {s}
-                  </button>
-                ))}
+                {product.sizes.map((s) => {
+                  const key = `${s}-${color}`;
+                  const stock = variantStock?.[key] ?? sizeStock.get(s) ?? 0;
+                  const isUnavailable = stock <= 0;
+                  return (
+                    <button
+                      key={s}
+                      className={`pdp-size ${size === s ? "is-active" : ""}`}
+                      onClick={() => setSize(s)}
+                      disabled={isUnavailable || isSold}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             <button
-              className={`btn btn-primary pdp-add ${
-                added ? "is-added" : ""
-              }`}
-              disabled={!size || isSold}
+              className={`btn btn-primary pdp-add ${added ? "is-added" : ""
+                }`}
+              disabled={!canAdd}
               onClick={handleAddToCart}
             >
               <span>
                 {isSold
                   ? "SOLD OUT"
-                  : size
-                  ? "ADD TO BAG"
-                  : "SELECT A SIZE"}
+                  : !size
+                    ? "SELECT A SIZE"
+                    : !canAdd
+                      ? "OUT OF STOCK"
+                      : "ADD TO BAG"}
               </span>
-              {!isSold && (
+              {canAdd && (
                 <span className="pdp-add-arrow" aria-hidden="true">→</span>
               )}
             </button>
@@ -208,7 +259,6 @@ export default function ProductDetail() {
         </div>
       </div>
 
-      {/* Size Guide Modal */}
       <SizeGuide
         open={sizeGuideOpen}
         onClose={() => setSizeGuideOpen(false)}

@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { products, formatPrice } from "../data/products";
+import { formatPrice } from "../lib/format";
+import useProducts from "../hooks/useProducts";
 
 const SUGGESTIONS = [
   "AIR LAYER",
   "350 GSM",
-  "BLACK",
-  "IVORY",
-  "FOREST",
+  "TEE",
 ];
 
 export default function SearchOverlay({ open, onClose }) {
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
 
-  // Focus input when opened
+  const { products } = useProducts();
+
   useEffect(() => {
     if (open) {
       const t = setTimeout(() => inputRef.current?.focus(), 200);
@@ -23,7 +23,6 @@ export default function SearchOverlay({ open, onClose }) {
     setQuery("");
   }, [open]);
 
-  // Lock body scroll
   useEffect(() => {
     if (open) {
       const prev = document.body.style.overflow;
@@ -34,7 +33,6 @@ export default function SearchOverlay({ open, onClose }) {
     }
   }, [open]);
 
-  // ESC closes
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -49,18 +47,16 @@ export default function SearchOverlay({ open, onClose }) {
       .filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q) ||
-          p.colors.some((c) => c.toLowerCase().includes(q))
+          (p.description || "").toLowerCase().includes(q)
       )
       .slice(0, 6);
-  }, [query]);
+  }, [query, products]);
 
   return (
     <div
       className={`search-overlay ${open ? "is-open" : ""}`}
       aria-hidden={!open}
     >
-      {/* Top bar */}
       <div className="container search-top">
         <span className="search-brand">SEARCH — BURMA VILLAGERS</span>
         <button
@@ -73,7 +69,6 @@ export default function SearchOverlay({ open, onClose }) {
         </button>
       </div>
 
-      {/* Input */}
       <div className="container search-input-wrap">
         <input
           ref={inputRef}
@@ -84,13 +79,9 @@ export default function SearchOverlay({ open, onClose }) {
           placeholder="WHAT ARE YOU LOOKING FOR?"
           aria-label="Search products"
         />
-
-        <span className="search-input-hint">
-          PRESS ESC TO CLOSE
-        </span>
+        <span className="search-input-hint">PRESS ESC TO CLOSE</span>
       </div>
 
-      {/* Body */}
       <div className="container search-body">
         {!query.trim() && (
           <div className="search-suggestions">
@@ -114,7 +105,7 @@ export default function SearchOverlay({ open, onClose }) {
             {results.map((p) => (
               <li key={p.id}>
                 <Link
-                  to={`/product/${p.id}`}
+                  to={`/product/${p.slug}`}
                   className="search-result"
                   onClick={onClose}
                 >

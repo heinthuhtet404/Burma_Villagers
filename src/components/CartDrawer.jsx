@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
-import { formatPrice } from "../data/products";
+import { formatPrice } from "../lib/format";
 
 const FREE_SHIP_THRESHOLD = 50000;
 
@@ -116,7 +116,7 @@ export default function CartDrawer({ open, onClose }) {
               {items.map((item) => (
                 <li key={item.key} className="cart-item">
                   <Link
-                    to={`/product/${item.id}`}
+                    to={`/product/${item.slug || item.id}`}
                     onClick={onClose}
                     className="cart-item-image"
                   >
@@ -126,7 +126,7 @@ export default function CartDrawer({ open, onClose }) {
                   <div className="cart-item-info">
                     <div className="cart-item-top">
                       <Link
-                        to={`/product/${item.id}`}
+                        to={`/product/${item.slug || item.id}`}
                         onClick={onClose}
                         className="cart-item-name"
                       >
