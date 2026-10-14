@@ -13,6 +13,8 @@ export default function Hero() {
   return (
     <section className="hero">
       <div className="container hero-inner">
+
+        
         {/* Text side */}
         <div className="hero-text">
           <p className="hero-eyebrow">350 GSM AIR LAYER — PLAIN COLLECTION</p>

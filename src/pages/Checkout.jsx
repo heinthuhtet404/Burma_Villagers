@@ -5,7 +5,12 @@ import { useAuth } from "../context/AuthContext";
 import { formatPrice } from "../lib/format";
 import { createOrder } from "../lib/orders";
 import { getAddresses } from "../lib/account";
+import { PAYMENT_CONFIG } from "../lib/payments";
+import PaymentProofUpload from "../components/PaymentProofUpload";
 
+/* ============================================================
+   DELIVERY OPTIONS
+   ============================================================ */
 const DELIVERY = {
   standard: {
     id: "standard",
@@ -19,12 +24,6 @@ const DELIVERY = {
     note: "Next day · Yangon only",
     price: 3000,
   },
-};
-
-const PAYMENT = {
-  cod: { id: "cod", label: "CASH ON DELIVERY" },
-  bank: { id: "bank", label: "BANK TRANSFER" },
-  kpay: { id: "kpay", label: "KPAY / WAVE PAY" },
 };
 
 const STEPS = [
@@ -51,20 +50,30 @@ export default function Checkout() {
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [delivery, setDelivery] = useState("standard");
-  const [payment, setPayment] = useState(null);
+
+  // Payment state
+  const [paymentMethod, setPaymentMethod] = useState(null); // "kpay_wave" | "cod"
+  const [paymentProofUrl, setPaymentProofUrl] = useState(null);
+  const [paymentReference, setPaymentReference] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const deliveryFee = DELIVERY[delivery].price;
   const total = subtotal + deliveryFee;
 
+  const isCod = paymentMethod === "cod";
+  const depositAmount = isCod
+    ? PAYMENT_CONFIG.cod.depositAmount
+    : 0;
+  const amountToPay = isCod ? depositAmount : total;
+
   /* ============================================================
-     Auto-fill from profile + addresses (if signed in)
+     Auto-fill from profile + addresses
      ============================================================ */
   useEffect(() => {
     if (!user) return;
 
-    // Pre-fill from profile
     setForm((f) => ({
       ...f,
       name: f.name || profile?.name || "",
@@ -72,11 +81,9 @@ export default function Checkout() {
       phone: f.phone || profile?.phone || "",
     }));
 
-    // Load saved addresses
     getAddresses(user.id)
       .then((list) => {
         setAddresses(list);
-        // Auto-select default address
         const defaultAddr = list.find((a) => a.is_default);
         if (defaultAddr) {
           applyAddress(defaultAddr);
@@ -107,7 +114,6 @@ export default function Checkout() {
 
   const update = (k, v) => {
     setForm((f) => ({ ...f, [k]: v }));
-    // Unselect address when manually editing
     if (k === "address" || k === "city" || k === "name" || k === "phone") {
       setSelectedAddressId(null);
     }
@@ -119,10 +125,16 @@ export default function Checkout() {
     form.phone.trim() &&
     form.address.trim();
 
+  const isPaymentValid = () => {
+    if (!paymentMethod) return false;
+    if (!paymentProofUrl) return false;
+    return true;
+  };
+
   const canProceed = () => {
     if (step === 1) return isInfoValid;
     if (step === 2) return !!delivery;
-    if (step === 3) return !!payment;
+    if (step === 3) return isPaymentValid();
     return true;
   };
 
@@ -135,10 +147,13 @@ export default function Checkout() {
     setStep((s) => Math.max(s - 1, 1));
   };
 
+  /* ============================================================
+     PLACE ORDER
+     ============================================================ */
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (step !== 4) return;
-    if (!isInfoValid || !payment || count === 0) return;
+    if (!isInfoValid || !isPaymentValid() || count === 0) return;
 
     setSubmitting(true);
     setError("");
@@ -148,11 +163,14 @@ export default function Checkout() {
         customer: form,
         items,
         delivery,
-        payment,
+        payment: paymentMethod,
         subtotal,
         deliveryFee,
         total,
-        userId: user?.id || null,  // ← link to account
+        userId: user?.id || null,
+        paymentProofUrl,
+        depositAmount,
+        paymentReference: paymentReference.trim() || null,
       });
 
       try {
@@ -168,14 +186,14 @@ export default function Checkout() {
       navigate("/order-confirmation", { replace: true });
     } catch (err) {
       console.error("Order failed:", err);
-      setError(
-        err.message || "Failed to place order. Please try again."
-      );
+      setError(err.message || "Failed to place order. Try again.");
       setSubmitting(false);
     }
   };
 
-  // Empty cart guard
+  /* ============================================================
+     EMPTY CART GUARD
+     ============================================================ */
   if (count === 0 && !submitting) {
     return (
       <section className="checkout">
@@ -208,7 +226,6 @@ export default function Checkout() {
           <span className="pdp-breadcrumb-current">CHECKOUT</span>
         </nav>
 
-        {/* Sign-in prompt for guests */}
         {!user && (
           <div className="checkout-signin-prompt">
             <p>
@@ -248,14 +265,15 @@ export default function Checkout() {
               </div>
             </header>
 
-            {/* STEP 1 — INFO */}
+            {/* ============================================
+                STEP 1 — INFO
+                ============================================ */}
             {step === 1 && (
               <div className="checkout-section">
                 <p className="checkout-section-title">
                   01 — CONTACT & ADDRESS
                 </p>
 
-                {/* Saved addresses (if signed in + has addresses) */}
                 {user && addresses.length > 0 && (
                   <div className="checkout-addresses">
                     <p className="checkout-addresses-title">
@@ -389,7 +407,9 @@ export default function Checkout() {
               </div>
             )}
 
-            {/* STEP 2 — DELIVERY */}
+            {/* ============================================
+                STEP 2 — DELIVERY
+                ============================================ */}
             {step === 2 && (
               <div className="checkout-section">
                 <p className="checkout-section-title">02 — DELIVERY</p>
@@ -429,44 +449,135 @@ export default function Checkout() {
               </div>
             )}
 
-            {/* STEP 3 — PAYMENT */}
+            {/* ============================================
+                STEP 3 — PAYMENT
+                ============================================ */}
             {step === 3 && (
               <div className="checkout-section">
                 <p className="checkout-section-title">03 — PAYMENT</p>
 
+                {/* Payment methods */}
                 <div className="checkout-options">
-                  {Object.values(PAYMENT).map((p) => (
+                  {Object.values(PAYMENT_CONFIG).map((p) => (
                     <label
                       key={p.id}
                       className={`checkout-option ${
-                        payment === p.id ? "is-active" : ""
+                        paymentMethod === p.id ? "is-active" : ""
                       }`}
                     >
                       <input
                         type="radio"
                         name="payment"
                         value={p.id}
-                        checked={payment === p.id}
-                        onChange={() => setPayment(p.id)}
+                        checked={paymentMethod === p.id}
+                        onChange={() => {
+                          setPaymentMethod(p.id);
+                          setPaymentProofUrl(null);
+                        }}
                       />
                       <span className="checkout-option-radio" />
                       <span className="checkout-option-info">
                         <span className="checkout-option-label">
                           {p.label}
                         </span>
+                        <span className="checkout-option-note">
+                          {p.description}
+                        </span>
+                      </span>
+                      <span className="checkout-option-price">
+                        {p.type === "deposit"
+                          ? formatPrice(p.depositAmount, "MMK")
+                          : formatPrice(total, "MMK")}
                       </span>
                     </label>
                   ))}
                 </div>
 
+                {/* Account info + Proof upload */}
+                {paymentMethod && (
+                  <div className="checkout-payment-detail">
+                    <div className="checkout-payment-accounts">
+                      <p className="checkout-payment-accounts-title">
+                        {isCod ? "SEND DEPOSIT TO" : "SEND PAYMENT TO"}
+                      </p>
+
+                      {PAYMENT_CONFIG[paymentMethod].accounts.map(
+                        (acc, i) => (
+                          <div
+                            key={i}
+                            className="checkout-payment-account"
+                          >
+                            <span className="checkout-payment-account-name">
+                              {acc.name}
+                            </span>
+                            <span className="checkout-payment-account-phone">
+                              {acc.phone}
+                            </span>
+                            <span className="checkout-payment-account-holder">
+                              {acc.holder}
+                            </span>
+                          </div>
+                        )
+                      )}
+
+                      <div className="checkout-payment-amount">
+                        <span>AMOUNT TO TRANSFER</span>
+                        <strong>{formatPrice(amountToPay, "MMK")}</strong>
+                      </div>
+
+                      {isCod && (
+                        <p className="checkout-payment-note">
+                          This is a deposit. The remaining{" "}
+                          <strong>
+                            {formatPrice(total - depositAmount, "MMK")}
+                          </strong>{" "}
+                          will be paid on delivery.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Proof upload */}
+                    <PaymentProofUpload
+                      value={paymentProofUrl}
+                      onChange={setPaymentProofUrl}
+                      label={
+                        isCod
+                          ? "DEPOSIT SCREENSHOT *"
+                          : "PAYMENT SCREENSHOT *"
+                      }
+                    />
+
+                    <div className="checkout-field">
+                      <label
+                        className="checkout-label"
+                        htmlFor="paymentReference"
+                      >
+                        TRANSACTION ID / NOTE (OPTIONAL)
+                      </label>
+                      <input
+                        id="paymentReference"
+                        className="checkout-input"
+                        type="text"
+                        value={paymentReference}
+                        onChange={(e) =>
+                          setPaymentReference(e.target.value)
+                        }
+                        placeholder="e.g. 1234567890"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <p className="checkout-note">
-                  All orders are packed in Yangon. Free returns within
-                  7 days.
+                  We'll verify your payment within 24 hours. Your order
+                  will be processed once confirmed.
                 </p>
               </div>
             )}
 
-            {/* STEP 4 — REVIEW */}
+            {/* ============================================
+                STEP 4 — REVIEW
+                ============================================ */}
             {step === 4 && (
               <div className="checkout-section">
                 <p className="checkout-section-title">04 — REVIEW</p>
@@ -499,15 +610,36 @@ export default function Checkout() {
                   <div className="checkout-review-block">
                     <p className="checkout-review-key">PAYMENT</p>
                     <p className="checkout-review-val">
-                      {PAYMENT[payment]?.label}
+                      {PAYMENT_CONFIG[paymentMethod]?.label}
+                      <br />
+                      <span className="checkout-review-muted">
+                        {isCod
+                          ? `Deposit ${formatPrice(depositAmount, "MMK")} now · Rest on delivery`
+                          : `Full ${formatPrice(total, "MMK")}`}
+                      </span>
                     </p>
                   </div>
                 </div>
+
+                {/* Proof preview */}
+                {paymentProofUrl && (
+                  <div className="checkout-review-proof">
+                    <p className="checkout-review-key">
+                      PAYMENT SCREENSHOT
+                    </p>
+                    <img
+                      src={paymentProofUrl}
+                      alt="Payment proof"
+                      className="checkout-review-proof-img"
+                    />
+                  </div>
+                )}
 
                 {error && <p className="admin-form-error">{error}</p>}
               </div>
             )}
 
+            {/* Nav */}
             <div className="checkout-nav">
               {step > 1 && (
                 <button
@@ -547,6 +679,9 @@ export default function Checkout() {
             </div>
           </form>
 
+          {/* ============================================
+              SUMMARY
+              ============================================ */}
           <aside className="checkout-summary">
             <div className="checkout-summary-head">
               <p className="checkout-summary-title">ORDER SUMMARY</p>
@@ -594,6 +729,13 @@ export default function Checkout() {
                 <span>TOTAL</span>
                 <span>{formatPrice(total, "MMK")}</span>
               </div>
+
+              {isCod && paymentMethod && (
+                <div className="checkout-summary-row checkout-summary-row--deposit">
+                  <span>DEPOSIT NOW</span>
+                  <span>{formatPrice(depositAmount, "MMK")}</span>
+                </div>
+              )}
             </div>
           </aside>
         </div>

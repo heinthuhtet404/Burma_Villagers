@@ -97,30 +97,7 @@ export default function MenuOverlay({ open, onClose, onCartOpen }) {
         </ul>
       </nav>
 
-      {/* Bottom meta */}
-      <div className="menu-overlay-bottom container">
-        <div className="menu-overlay-col">
-          <span className="menu-overlay-col-title">FOLLOW</span>
-          <a href="https://tiktok.com" target="_blank" rel="noreferrer">
-            TIKTOK ↗
-          </a>
-          <a href="https://instagram.com" target="_blank" rel="noreferrer">
-            INSTAGRAM ↗
-          </a>
-        </div>
-
-        <div className="menu-overlay-col">
-          <span className="menu-overlay-col-title">CONTACT</span>
-          <a href="mailto:hello@burmavillagers.com">
-            HELLO@BURMAVILLAGERS.COM
-          </a>
-        </div>
-
-        <div className="menu-overlay-col menu-overlay-col--end">
-          <span className="menu-overlay-col-title">YANGON</span>
-          <span>MM · GMT+6:30</span>
-        </div>
-      </div>
+      {/* ❌ FOLLOW / CONTACT / YANGON — ဒီအပိုင်း ဖျက်လိုက်တယ် */}
     </div>
   );
 }
