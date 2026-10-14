@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { formatPrice } from "../lib/format";
 import { getOrderByNumber } from "../lib/orders";
+import { PAYMENT_CONFIG } from "../lib/payments";
 
 export default function OrderConfirmation() {
   const { user } = useAuth();
@@ -78,13 +79,18 @@ export default function OrderConfirmation() {
   }
 
   const firstName = order.customerName.split(" ")[0].toUpperCase();
+  const isCod = order.paymentMethod === "cod";
+  const paymentInfo = PAYMENT_CONFIG[order.paymentMethod] || {};
+
+  const depositAmount = order.depositAmount || 0;
+  const remainingAmount = order.total - depositAmount;
 
   return (
     <section className="confirmation">
       <div className="container confirmation-inner">
         <p className="confirmation-eyebrow">
           <span className="confirmation-dot" />
-          ORDER CONFIRMED
+          ORDER PLACED
         </p>
 
         <h1 className="confirmation-title">
@@ -94,9 +100,24 @@ export default function OrderConfirmation() {
         </h1>
 
         <p className="confirmation-sub">
-          Your order is on the way. We'll text you when it ships.
+          Your order is being processed. We'll verify your payment
+          within 24 hours.
         </p>
 
+        {/* Payment status banner */}
+        <div className="confirmation-status">
+          <div className="confirmation-status-icon">⏳</div>
+          <div>
+            <p className="confirmation-status-title">
+              PAYMENT PENDING VERIFICATION
+            </p>
+            <p className="confirmation-status-note">
+              We'll notify you once your payment is confirmed.
+            </p>
+          </div>
+        </div>
+
+        {/* Order info grid */}
         <div className="confirmation-grid">
           <div className="confirmation-block">
             <p className="confirmation-block-key">ORDER №</p>
@@ -117,12 +138,53 @@ export default function OrderConfirmation() {
           <div className="confirmation-block">
             <p className="confirmation-block-key">PAYMENT</p>
             <p className="confirmation-block-val">
-              {order.paymentMethod.toUpperCase()}
+              {order.paymentMethod === "kpay_wave"
+                ? "KPAY / WAVE"
+                : "COD"}
             </p>
           </div>
         </div>
 
-        {/* Order items */}
+        {/* COD deposit info */}
+        {isCod && depositAmount > 0 && (
+          <div className="confirmation-deposit">
+            <p className="confirmation-deposit-title">
+              CASH ON DELIVERY
+            </p>
+            <div className="confirmation-deposit-rows">
+              <div className="confirmation-deposit-row">
+                <span>Deposit paid</span>
+                <strong>{formatPrice(depositAmount, "MMK")}</strong>
+              </div>
+              <div className="confirmation-deposit-row">
+                <span>Pay on delivery</span>
+                <strong>{formatPrice(remainingAmount, "MMK")}</strong>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment proof */}
+        {order.paymentProofUrl && (
+          <div className="confirmation-proof">
+            <p className="confirmation-proof-title">
+              {isCod ? "DEPOSIT SCREENSHOT" : "PAYMENT SCREENSHOT"}
+            </p>
+            <div className="confirmation-proof-image">
+              <img
+                src={order.paymentProofUrl}
+                alt="Payment proof"
+              />
+            </div>
+            {order.paymentReference && (
+              <p className="confirmation-proof-ref">
+                <span>REFERENCE:</span> {order.paymentReference}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Items */}
         {order.items.length > 0 && (
           <div className="confirmation-items">
             <p className="confirmation-items-title">
@@ -154,6 +216,7 @@ export default function OrderConfirmation() {
           </div>
         )}
 
+        {/* Actions */}
         <div className="confirmation-actions">
           {user ? (
             <Link to="/account/orders" className="btn btn-primary">
@@ -169,7 +232,7 @@ export default function OrderConfirmation() {
           </Link>
         </div>
 
-        {/* Sign-in prompt for guests */}
+        {/* Guest signup prompt */}
         {!user && (
           <div className="confirmation-signup">
             <p>

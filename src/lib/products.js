@@ -234,3 +234,78 @@ export async function getLowStockProducts(threshold = 5) {
     })
     .filter((p) => p.totalStock <= threshold);
 }
+
+/* ============================================================
+   GET PRODUCTS PAGINATED
+   Returns: { products, total, hasMore }
+   ============================================================ */
+export async function getProductsPaginated({
+  limit = 12,
+  offset = 0,
+  onlyNew = false,
+} = {}) {
+  const { data, error } = await supabase.rpc("get_products_paginated", {
+    p_limit: limit,
+    p_offset: offset,
+    p_only_new: onlyNew,
+  });
+
+  if (error) {
+    console.error("getProductsPaginated error:", error);
+    throw error;
+  }
+
+  const rows = data || [];
+  const total = rows[0]?.total_count ? Number(rows[0].total_count) : 0;
+
+  const products = rows.map((row) => {
+    const images = (row.product_images || [])
+      .sort((a, b) => a.position - b.position)
+      .map((img) => img.url);
+
+    const variants = row.variants || [];
+    const stock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+
+    const sizes = Array.from(
+      new Set(variants.map((v) => v.size))
+    ).sort((a, b) => {
+      const order = { S: 0, M: 1, L: 2, XL: 3, XXL: 4 };
+      return (order[a] ?? 99) - (order[b] ?? 99);
+    });
+
+    const colors = Array.from(
+      new Map(
+        variants.map((v) => [
+          v.color,
+          { hex: v.color, name: v.color_name },
+        ])
+      ).values()
+    );
+
+    return {
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      description: row.description,
+      price: row.price,
+      currency: row.currency || "MMK",
+      isNew: row.is_new,
+      isActive: row.is_active,
+      dropId: row.drop_id,
+      images: images.length > 0 ? images : ["/images/placeholder.jpg"],
+      image: images[0] || "/images/placeholder.jpg",
+      variants,
+      sizes,
+      colors: colors.map((c) => c.hex),
+      colorNames: colors,
+      stock,
+      createdAt: row.created_at,
+    };
+  });
+
+  return {
+    products,
+    total,
+    hasMore: offset + products.length < total,
+  };
+}

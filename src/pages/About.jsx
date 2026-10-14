@@ -21,7 +21,7 @@ export default function About() {
         </h1>
 
         <div className="about-head-meta">
-          <span>YANGON · MM</span>
+          <span>KANAUNG · MM</span>
           <span>16.8409° N</span>
           <span>GMT +6:30</span>
         </div>

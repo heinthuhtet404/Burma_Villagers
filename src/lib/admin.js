@@ -143,7 +143,6 @@ export async function updateProduct(id, input) {
    DELETE PRODUCT
    ============================================================ */
 export async function deleteProduct(id) {
-  // Cascades: images + variants deleted automatically via FK
   const { error } = await supabase
     .from("products")
     .delete()
@@ -255,7 +254,7 @@ export async function getProductForAdmin(id) {
 }
 
 /* ============================================================
-   UPLOAD IMAGE to Supabase Storage
+   UPLOAD IMAGE to Supabase Storage (product-images)
    ============================================================ */
 export async function uploadProductImage(file) {
   const ext = file.name.split(".").pop();
@@ -281,10 +280,9 @@ export async function uploadProductImage(file) {
 }
 
 /* ============================================================
-   DELETE IMAGE from Storage
+   DELETE IMAGE from Storage (product-images)
    ============================================================ */
 export async function deleteProductImage(url) {
-  // Extract path from URL
   const parts = url.split("/product-images/");
   if (parts.length < 2) return;
 
@@ -314,6 +312,7 @@ export async function getAllOrders({ status = null } = {}) {
       status,
       payment_status,
       payment_method,
+      payment_proof_url,
       delivery_method,
       created_at,
       order_items (id, quantity)
@@ -337,6 +336,7 @@ export async function getAllOrders({ status = null } = {}) {
     status: row.status,
     paymentStatus: row.payment_status,
     paymentMethod: row.payment_method,
+    paymentProofUrl: row.payment_proof_url,
     deliveryMethod: row.delivery_method,
     createdAt: row.created_at,
     itemCount: (row.order_items || []).reduce(
@@ -367,6 +367,12 @@ export async function getOrderById(id) {
       delivery_method,
       payment_method,
       payment_status,
+      payment_proof_url,
+      deposit_amount,
+      payment_reference,
+      payment_note,
+      payment_verified_at,
+      payment_verified_by,
       status,
       created_at,
       updated_at,
@@ -403,6 +409,12 @@ export async function getOrderById(id) {
     deliveryMethod: data.delivery_method,
     paymentMethod: data.payment_method,
     paymentStatus: data.payment_status,
+    paymentProofUrl: data.payment_proof_url,
+    depositAmount: data.deposit_amount,
+    paymentReference: data.payment_reference,
+    paymentNote: data.payment_note,
+    paymentVerifiedAt: data.payment_verified_at,
+    paymentVerifiedBy: data.payment_verified_by,
     status: data.status,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
@@ -445,6 +457,63 @@ export async function updatePaymentStatus(id, payment_status) {
 }
 
 /* ============================================================
+   VERIFY PAYMENT (admin approve / reject)
+   ============================================================ */
+export async function verifyPayment(
+  orderId,
+  { status, note = null, adminId = null }
+) {
+  if (!["paid", "failed"].includes(status)) {
+    throw new Error("Invalid payment status. Use 'paid' or 'failed'.");
+  }
+
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      payment_status: status,
+      payment_note: note,
+      payment_verified_at: new Date().toISOString(),
+      payment_verified_by: adminId,
+    })
+    .eq("id", orderId);
+
+  if (error) throw error;
+}
+
+/* ============================================================
+   GET PENDING PAYMENT ORDERS (admin dashboard alert)
+   ============================================================ */
+export async function getPendingPaymentOrders() {
+  const { data, error } = await supabase
+    .from("orders")
+    .select(`
+      id,
+      order_number,
+      customer_name,
+      total,
+      payment_method,
+      payment_status,
+      payment_proof_url,
+      created_at
+    `)
+    .eq("payment_status", "pending_verification")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    orderNumber: row.order_number,
+    customerName: row.customer_name,
+    total: row.total,
+    paymentMethod: row.payment_method,
+    paymentStatus: row.payment_status,
+    paymentProofUrl: row.payment_proof_url,
+    createdAt: row.created_at,
+  }));
+}
+
+/* ============================================================
    ORDER STATS
    ============================================================ */
 export async function getOrderStats() {
@@ -459,6 +528,9 @@ export async function getOrderStats() {
   const revenue = orders
     .filter((o) => o.payment_status === "paid")
     .reduce((sum, o) => sum + (o.total || 0), 0);
+  const pendingPayment = orders.filter(
+    (o) => o.payment_status === "pending_verification"
+  ).length;
 
   const byStatus = orders.reduce((acc, o) => {
     acc[o.status] = (acc[o.status] || 0) + 1;
@@ -468,6 +540,7 @@ export async function getOrderStats() {
   return {
     total,
     revenue,
+    pendingPayment,
     pending: byStatus.pending || 0,
     processing: byStatus.processing || 0,
     shipped: byStatus.shipped || 0,

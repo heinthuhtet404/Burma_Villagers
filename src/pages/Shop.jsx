@@ -2,9 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ProductCard from "../components/ProductCard";
 import useProducts from "../hooks/useProducts";
 
+const PAGE_SIZE = 8;
+
 export default function Shop() {
   const gridRef = useRef(null);
-  const { products, loading, error } = useProducts();
+  const { products, loading, loadingMore, error, total, hasMore, loadMore } =
+    useProducts({
+      paginate: true,
+      pageSize: PAGE_SIZE,
+    });
+
   const [sortBy, setSortBy] = useState("newest");
 
   const sorted = useMemo(() => {
@@ -24,13 +31,13 @@ export default function Shop() {
     }
   }, [products, sortBy]);
 
-  // 🎯 Reveal grid as soon as products are rendered
+  /* ============================================================
+     Reveal grid when products are ready
+     ============================================================ */
   useEffect(() => {
     if (loading || sorted.length === 0) return;
     const el = gridRef.current;
     if (!el) return;
-
-    // Force next frame so transition applies
     requestAnimationFrame(() => {
       el.classList.add("is-revealed");
     });
@@ -61,14 +68,14 @@ export default function Shop() {
 
         {loading && <p className="shop-count">LOADING…</p>}
 
-        {error && (
+        {error && !loading && (
           <p className="shop-count">FAILED TO LOAD. REFRESH.</p>
         )}
 
         {!loading && !error && (
           <>
             <p className="shop-count">
-              {sorted.length} PRODUCT{sorted.length !== 1 ? "S" : ""}
+              {products.length} OF {total} PRODUCT{total !== 1 ? "S" : ""}
             </p>
 
             <div
@@ -78,6 +85,40 @@ export default function Shop() {
               {sorted.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
+            </div>
+
+            {/* ============================================
+                LOAD MORE
+                ============================================ */}
+            <div className="shop-loadmore">
+              {hasMore ? (
+                <button
+                  type="button"
+                  className="shop-loadmore-btn"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? (
+                    <span className="shop-loadmore-loading">
+                      <span className="shop-loadmore-dot" />
+                      LOADING…
+                    </span>
+                  ) : (
+                    <>
+                      <span>LOAD MORE</span>
+                      <span className="shop-loadmore-count">
+                        ({products.length} / {total})
+                      </span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                products.length > 0 && (
+                  <p className="shop-loadmore-end">
+                    — ALL PRODUCTS SHOWN —
+                  </p>
+                )
+              )}
             </div>
           </>
         )}

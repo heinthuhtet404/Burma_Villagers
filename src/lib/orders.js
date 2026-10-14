@@ -51,7 +51,7 @@ async function decrementStock(variantId, quantity) {
 }
 
 /* ============================================================
-   CREATE ORDER (guest + signed-in checkout + stock decrement)
+   CREATE ORDER (guest + signed-in + payment proof + stock)
    ============================================================ */
 export async function createOrder({
   customer,
@@ -61,10 +61,13 @@ export async function createOrder({
   subtotal,
   deliveryFee,
   total,
-  userId = null, // ← link to account if signed in
+  userId = null,
+  paymentProofUrl = null,
+  depositAmount = 0,
+  paymentReference = null,
 }) {
   // 1. Pre-flight: check stock for all items
-  const variantMap = new Map(); // key → { variantId, item }
+  const variantMap = new Map();
 
   for (const item of items) {
     const variantId = await findVariantId(item.id, item.size, item.color);
@@ -97,8 +100,11 @@ export async function createOrder({
       total,
       delivery_method: delivery,
       payment_method: payment,
-      payment_status: "pending",
+      payment_status: "pending_verification",
       status: "pending",
+      payment_proof_url: paymentProofUrl,
+      deposit_amount: depositAmount,
+      payment_reference: paymentReference,
     })
     .select()
     .single();
@@ -126,12 +132,11 @@ export async function createOrder({
     .insert(orderItems);
 
   if (itemsError) {
-    // Rollback order
     await supabase.from("orders").delete().eq("id", order.id);
     throw itemsError;
   }
 
-  // 4. Decrement stock for each variant
+  // 4. Decrement stock
   const decrementErrors = [];
 
   for (const item of items) {
@@ -141,15 +146,10 @@ export async function createOrder({
     const result = await decrementStock(entry.variantId, item.qty);
 
     if (!result.success) {
-      decrementErrors.push({
-        item,
-        message: result.message,
-      });
+      decrementErrors.push({ item, message: result.message });
     }
   }
 
-  // ⚠️ If any decrement failed — log but don't rollback
-  // (order already placed, admin can handle manually)
   if (decrementErrors.length > 0) {
     console.warn("Some stock decrements failed:", decrementErrors);
   }
@@ -182,6 +182,11 @@ export async function getOrderByNumber(orderNumber) {
       delivery_method,
       payment_method,
       payment_status,
+      payment_proof_url,
+      deposit_amount,
+      payment_reference,
+      payment_note,
+      payment_verified_at,
       status,
       created_at,
       order_items (
@@ -215,6 +220,11 @@ export async function getOrderByNumber(orderNumber) {
     deliveryMethod: data.delivery_method,
     paymentMethod: data.payment_method,
     paymentStatus: data.payment_status,
+    paymentProofUrl: data.payment_proof_url,
+    depositAmount: data.deposit_amount,
+    paymentReference: data.payment_reference,
+    paymentNote: data.payment_note,
+    paymentVerifiedAt: data.payment_verified_at,
     status: data.status,
     createdAt: data.created_at,
     items: (data.order_items || []).map((it) => ({
@@ -233,7 +243,6 @@ export async function getOrderByNumber(orderNumber) {
    RESTORE STOCK (when order cancelled)
    ============================================================ */
 export async function restoreOrderStock(orderId) {
-  // Get order items with variant_id
   const { data: items, error } = await supabase
     .from("order_items")
     .select("variant_id, quantity")

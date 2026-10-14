@@ -81,12 +81,12 @@ export default function Footer() {
             </li>
             <li>
               <a
-                href="https://instagram.com"
+                href="https://facebook.com"
                 target="_blank"
                 rel="noreferrer"
               >
                 <span className="footer-col-id">06</span>
-                <span className="footer-col-text">INSTAGRAM</span>
+                <span className="footer-col-text">FACEBOOK</span>
                 <span className="footer-col-arrow" aria-hidden="true">↗</span>
               </a>
             </li>
@@ -99,7 +99,7 @@ export default function Footer() {
           <div className="footer-meta">
             <p className="footer-meta-line">
               <span className="footer-meta-key">FROM</span>
-              <span className="footer-meta-val">YANGON, MM</span>
+              <span className="footer-meta-val">KANAUNG, MM</span>
             </p>
             <p className="footer-meta-line">
               <span className="footer-meta-key">TIME</span>
@@ -111,7 +111,7 @@ export default function Footer() {
                 href="mailto:hello@burmavillagers.com"
                 className="footer-meta-val"
               >
-                HELLO@BURMAVILLAGERS.COM
+                BURMAVILLAGERS@GMAIL.COM
               </a>
             </p>
           </div>
