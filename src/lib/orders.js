@@ -1,163 +1,70 @@
 import { supabase } from "./supabase";
 
 /* ============================================================
-   FIND VARIANT ID by product + size + color
-   ============================================================ */
-async function findVariantId(productId, size, color) {
-  if (!productId || !size || !color) return null;
-
-  const { data, error } = await supabase
-    .from("variants")
-    .select("id, stock")
-    .eq("product_id", productId)
-    .eq("size", size)
-    .eq("color", color)
-    .maybeSingle();
-
-  if (error) {
-    console.warn("findVariantId error:", error);
-    return null;
-  }
-
-  return data?.id || null;
-}
-
-/* ============================================================
-   DECREMENT STOCK via RPC
-   ============================================================ */
-async function decrementStock(variantId, quantity) {
-  if (!variantId) return { success: false, message: "No variant ID" };
-
-  const { data, error } = await supabase.rpc("decrement_variant_stock", {
-    p_variant_id: variantId,
-    p_quantity: quantity,
-  });
-
-  if (error) {
-    console.error("decrementStock error:", error);
-    return { success: false, message: error.message };
-  }
-
-  const result = Array.isArray(data) ? data[0] : data;
-
-  if (!result?.success) {
-    return {
-      success: false,
-      message: result?.message || "Stock decrement failed",
-    };
-  }
-
-  return { success: true, newStock: result.new_stock };
-}
-
-/* ============================================================
-   CREATE ORDER (guest + signed-in + payment proof + stock)
+   CREATE ORDER (via Edge Function — server-validated prices)
    ============================================================ */
 export async function createOrder({
   customer,
   items,
   delivery,
   payment,
-  subtotal,
-  deliveryFee,
-  total,
-  userId = null,
   paymentProofUrl = null,
-  depositAmount = 0,
   paymentReference = null,
 }) {
-  // 1. Pre-flight: check stock for all items
-  const variantMap = new Map();
+  // Get current session (for auth.uid — guests are null)
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  for (const item of items) {
-    const variantId = await findVariantId(item.id, item.size, item.color);
+  const headers = {
+    "Content-Type": "application/json",
+  };
 
-    if (!variantId) {
-      throw new Error(
-        `"${item.name}" (size ${item.size}) is no longer available.`
-      );
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-order`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        customer: {
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          address: customer.address,
+          city: customer.city || "Yangon",
+          notes: customer.notes || "",
+        },
+        items: items.map((it) => ({
+          productId: it.id,
+          size: it.size,
+          color: it.color,
+          quantity: it.qty,
+        })),
+        deliveryMethod: delivery,
+        paymentMethod: payment,
+        paymentProofUrl,
+        paymentReference: paymentReference || null,
+      }),
     }
+  );
 
-    variantMap.set(`${item.id}-${item.size}-${item.color}`, {
-      variantId,
-      item,
-    });
-  }
+  const data = await res.json().catch(() => ({}));
 
-  // 2. Create order
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      user_id: userId,
-      customer_name: customer.name,
-      customer_email: customer.email,
-      customer_phone: customer.phone,
-      address: customer.address,
-      city: customer.city || "Yangon",
-      notes: customer.notes || null,
-      subtotal,
-      delivery_fee: deliveryFee,
-      total,
-      delivery_method: delivery,
-      payment_method: payment,
-      payment_status: "pending_verification",
-      status: "pending",
-      payment_proof_url: paymentProofUrl,
-      deposit_amount: depositAmount,
-      payment_reference: paymentReference,
-    })
-    .select()
-    .single();
-
-  if (orderError) throw orderError;
-
-  // 3. Create order items
-  const orderItems = items.map((item) => {
-    const entry = variantMap.get(`${item.id}-${item.size}-${item.color}`);
-    return {
-      order_id: order.id,
-      product_id: item.id || null,
-      variant_id: entry?.variantId || null,
-      product_name: item.name,
-      product_image: item.image,
-      size: item.size,
-      color: item.color,
-      price: item.price,
-      quantity: item.qty,
-    };
-  });
-
-  const { error: itemsError } = await supabase
-    .from("order_items")
-    .insert(orderItems);
-
-  if (itemsError) {
-    await supabase.from("orders").delete().eq("id", order.id);
-    throw itemsError;
-  }
-
-  // 4. Decrement stock
-  const decrementErrors = [];
-
-  for (const item of items) {
-    const entry = variantMap.get(`${item.id}-${item.size}-${item.color}`);
-    if (!entry) continue;
-
-    const result = await decrementStock(entry.variantId, item.qty);
-
-    if (!result.success) {
-      decrementErrors.push({ item, message: result.message });
-    }
-  }
-
-  if (decrementErrors.length > 0) {
-    console.warn("Some stock decrements failed:", decrementErrors);
+  if (!res.ok) {
+    throw new Error(data.error || "Order failed. Please try again.");
   }
 
   return {
-    id: order.id,
-    orderNumber: order.order_number,
-    ...order,
+    id: data.orderId,
+    orderNumber: data.orderNumber,
+    subtotal: data.subtotal,
+    deliveryFee: data.deliveryFee,
+    total: data.total,
+    depositAmount: data.depositAmount,
   };
 }
 
@@ -268,7 +175,7 @@ export async function restoreOrderStock(orderId) {
 }
 
 /* ============================================================
-   SEND ORDER EMAIL (Edge Function) — optional
+   SEND ORDER EMAIL (Edge Function — optional)
    ============================================================ */
 export async function sendOrderEmail(order) {
   try {

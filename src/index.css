@@ -8227,3 +8227,123 @@ textarea.auth-input {
     font-size: 10px;
   }
 }
+
+/* ============================================================
+   AUTH — Success alert
+   ============================================================ */
+.auth-alert {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  margin-bottom: 24px;
+  background: rgba(9, 62, 24, 0.06);
+  border-left: 3px solid var(--color-primary);
+}
+
+.auth-alert-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.auth-alert-title {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: 6px;
+}
+
+.auth-alert-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.auth-alert-text strong {
+  font-weight: 700;
+  color: var(--color-primary);
+  word-break: break-all;
+}
+
+/* Success steps */
+.auth-success-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  background: var(--color-bg-soft);
+  border: 1px solid var(--color-line-strong);
+}
+
+.auth-success-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.auth-success-step span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line-strong);
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* Resend link */
+.auth-resend {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.auth-resend:hover {
+  opacity: 0.7;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .auth-alert {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .auth-alert-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  .auth-success-steps {
+    padding: 16px;
+  }
+}
