@@ -3,17 +3,14 @@ import { Link } from "react-router-dom";
 import { formatPrice } from "../lib/format";
 import useProducts from "../hooks/useProducts";
 
-const SUGGESTIONS = [
-  "AIR LAYER",
-  "350 GSM",
-  "TEE",
-];
+const SUGGESTIONS = ["AIR LAYER", "350 GSM", "TEE"];
 
 export default function SearchOverlay({ open, onClose }) {
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
 
-  const { products } = useProducts();
+  // ✅ Shop items အားလုံး ဆွဲ (paginate: false → all products)
+  const { products } = useProducts({ paginate: false });
 
   useEffect(() => {
     if (open) {
@@ -46,7 +43,7 @@ export default function SearchOverlay({ open, onClose }) {
     return products
       .filter(
         (p) =>
-          p.name.toLowerCase().includes(q) ||
+          (p.name || "").toLowerCase().includes(q) ||
           (p.description || "").toLowerCase().includes(q)
       )
       .slice(0, 6);
@@ -105,17 +102,21 @@ export default function SearchOverlay({ open, onClose }) {
             {results.map((p) => (
               <li key={p.id}>
                 <Link
-                  to={`/product/${p.slug}`}
+                  to={`/product/${p.slug || p.id}`}
                   className="search-result"
                   onClick={onClose}
                 >
                   <div className="search-result-image">
-                    <img src={p.image} alt={p.name} />
+                    {p.image ? (
+                      <img src={p.image} alt={p.name} />
+                    ) : (
+                      <span />
+                    )}
                   </div>
                   <div className="search-result-info">
                     <p className="search-result-name">{p.name}</p>
                     <p className="search-result-price">
-                      {formatPrice(p.price, p.currency)}
+                      {formatPrice(p.price, p.currency || "MMK")}
                     </p>
                   </div>
                   <span className="search-result-arrow">→</span>
@@ -131,14 +132,14 @@ export default function SearchOverlay({ open, onClose }) {
               Nothing for "{query.toUpperCase()}".
             </p>
             <p className="search-empty-sub">
-              Try a different word, or browse the new drop.
+              Try a different word, or browse the shop.
             </p>
             <Link
-              to="/new-drop"
+              to="/shop"
               className="btn btn-primary"
               onClick={onClose}
             >
-              VIEW NEW DROP →
+              BROWSE SHOP →
             </Link>
           </div>
         )}
