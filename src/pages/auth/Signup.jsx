@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Signup() {
   const { user, loading, signUp } = useAuth();
-  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     name: "",
@@ -16,8 +15,10 @@ export default function Signup() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [emailSentTo, setEmailSentTo] = useState("");
 
-  if (!loading && user) return <Navigate to="/account" replace />;
+  // Only redirect if user is signed in AND not in success state
+  if (!loading && user && !success) return <Navigate to="/account" replace />;
 
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -32,6 +33,7 @@ export default function Signup() {
       return setError("Passwords do not match");
 
     setSubmitting(true);
+
     try {
       await signUp({
         email: form.email.trim(),
@@ -39,34 +41,87 @@ export default function Signup() {
         name: form.name.trim(),
         phone: form.phone.trim(),
       });
-      setSuccess(true);
 
-      // If auto-confirmed, redirect to account
-      setTimeout(() => navigate("/account"), 1200);
+      // Show "check your email" — DO NOT redirect
+      setEmailSentTo(form.email.trim());
+      setSuccess(true);
     } catch (err) {
       setError(err.message || "Sign up failed");
+    } finally {
       setSubmitting(false);
     }
   };
 
+  /* ============================================================
+     SUCCESS STATE — "Check your email"
+     ============================================================ */
   if (success) {
     return (
       <section className="auth-page">
         <div className="auth-panel">
           <p className="auth-eyebrow">BURMA VILLAGERS</p>
+
           <h1 className="auth-title">
-            WELCOME
+            CHECK
             <br />
-            ABOARD.
+            YOUR EMAIL.
           </h1>
-          <p className="auth-sub">
-            Your account is ready. Redirecting…
+
+          <div className="auth-alert">
+            <span className="auth-alert-icon">✓</span>
+            <div>
+              <p className="auth-alert-title">
+                CONFIRMATION EMAIL SENT
+              </p>
+              <p className="auth-alert-text">
+                We sent a confirmation link to{" "}
+                <strong>{emailSentTo}</strong>. Click the link in your
+                email to activate your account.
+              </p>
+            </div>
+          </div>
+
+          <div className="auth-success-steps">
+            <p className="auth-success-step">
+              <span>1</span>
+              Open your email inbox
+            </p>
+            <p className="auth-success-step">
+              <span>2</span>
+              Click the confirmation link
+            </p>
+            <p className="auth-success-step">
+              <span>3</span>
+              You'll be redirected to your account
+            </p>
+          </div>
+
+          <p className="auth-note">
+            Didn't receive the email? Check your spam folder or{" "}
+            <button
+              type="button"
+              className="auth-resend"
+              onClick={() => {
+                setSuccess(false);
+                setForm((f) => ({ ...f, password: "", confirm: "" }));
+              }}
+            >
+              try again
+            </button>
+            .
           </p>
+
+          <Link to="/login" className="auth-link">
+            ← BACK TO SIGN IN
+          </Link>
         </div>
       </section>
     );
   }
 
+  /* ============================================================
+     FORM STATE
+     ============================================================ */
   return (
     <section className="auth-page">
       <div className="auth-panel">
@@ -170,7 +225,8 @@ export default function Signup() {
         </form>
 
         <p className="auth-note">
-          By creating an account, you agree to our Terms & Privacy Policy.
+          By creating an account, you agree to our Terms & Privacy
+          Policy.
         </p>
       </div>
     </section>

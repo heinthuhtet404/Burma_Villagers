@@ -9,7 +9,8 @@ import { PAYMENT_CONFIG } from "../lib/payments";
 import PaymentProofUpload from "../components/PaymentProofUpload";
 
 /* ============================================================
-   DELIVERY OPTIONS
+   DELIVERY OPTIONS — for UI display only
+   (server recomputes these — never trust client)
    ============================================================ */
 const DELIVERY = {
   standard: {
@@ -52,20 +53,19 @@ export default function Checkout() {
   const [delivery, setDelivery] = useState("standard");
 
   // Payment state
-  const [paymentMethod, setPaymentMethod] = useState(null); // "kpay_wave" | "cod"
+  const [paymentMethod, setPaymentMethod] = useState(null);
   const [paymentProofUrl, setPaymentProofUrl] = useState(null);
   const [paymentReference, setPaymentReference] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // UI-display only (server recomputes)
   const deliveryFee = DELIVERY[delivery].price;
   const total = subtotal + deliveryFee;
 
   const isCod = paymentMethod === "cod";
-  const depositAmount = isCod
-    ? PAYMENT_CONFIG.cod.depositAmount
-    : 0;
+  const depositAmount = isCod ? PAYMENT_CONFIG.cod.depositAmount : 0;
   const amountToPay = isCod ? depositAmount : total;
 
   /* ============================================================
@@ -148,7 +148,7 @@ export default function Checkout() {
   };
 
   /* ============================================================
-     PLACE ORDER
+     PLACE ORDER — via Edge Function (server-validated)
      ============================================================ */
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
@@ -164,12 +164,7 @@ export default function Checkout() {
         items,
         delivery,
         payment: paymentMethod,
-        subtotal,
-        deliveryFee,
-        total,
-        userId: user?.id || null,
         paymentProofUrl,
-        depositAmount,
         paymentReference: paymentReference.trim() || null,
       });
 

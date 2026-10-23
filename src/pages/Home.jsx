@@ -126,7 +126,7 @@ export default function Home() {
             </h2>
           </div>
           <a
-            href="https://tiktok.com"
+            href="https://www.tiktok.com/@burma.villagers?_r=1&_t=ZS-9AnaUZa0hfw"
             target="_blank"
             rel="noreferrer"
             className="btn btn-primary"
