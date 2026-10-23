@@ -1,177 +1,231 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import DropHero from "../components/DropHero";
-import useProducts from "../hooks/useProducts";
 import useScrollReveal from "../hooks/useScrollReveal";
-import { formatPrice } from "../lib/format";
-import { getProductStatus } from "../lib/products";
 
-const DROP_NUMBER = "001";
-const DROP_NAME = "350 GSM AIR LAYER";
-const DROP_TAGLINE = "HEAVY. CLEAN. EVERYDAY.";
+/* ============================================================
+   DROP CONFIG — Coming Soon
+   ============================================================ */
+const NEXT_DROP = {
+  number: "002",
+  name: "350 GSM AIR LAYER — PART II",
+  tagline: "HEAVY. CLEAN. EVERYDAY.",
+  description:
+    "The next chapter from Burma Villagers. New colorways, new cuts, same heavy-weight fabric. Drop 002 arrives soon.",
+  // ⚠️ သင့် drop ရက်စွဲ ထည့် — ဥပမာ 30 days from now
+  releaseDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+};
+
+/* ============================================================
+   Countdown — days / hours / minutes / seconds
+   ============================================================ */
+function useCountdown(targetDate) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const diff = Math.max(targetDate.getTime() - now, 0);
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
+
+  return { days, hours, minutes, seconds, isLive: diff === 0 };
+}
 
 export default function NewDrop() {
   const headerRef = useScrollReveal();
+  const countdownRef = useScrollReveal({ threshold: 0.2 });
   const notifyRef = useScrollReveal({ threshold: 0.2 });
-  const gridRef = useRef(null);
+  const teaserRef = useScrollReveal({ threshold: 0.2 });
 
-  const { products, loading, error } = useProducts({ onlyNew: true });
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
-  // 🎯 Reveal grid as soon as products are rendered
-  useEffect(() => {
-    if (loading || products.length === 0) return;
-    const el = gridRef.current;
-    if (!el) return;
+  const { days, hours, minutes, seconds, isLive } = useCountdown(
+    NEXT_DROP.releaseDate
+  );
 
-    requestAnimationFrame(() => {
-      el.classList.add("is-revealed");
-    });
-  }, [loading, products.length]);
+  const pad = (n) => String(n).padStart(2, "0");
+
+  const handleNotify = (e) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    // TODO: save to Supabase newsletter table (later)
+    setSubmitted(true);
+  };
 
   return (
-    <section className="new-drop-page">
-      {/* Top ticker */}
+    <section className="new-drop-page new-drop-coming">
+      {/* ============================================
+          TICKER
+          ============================================ */}
       <div className="drop-ticker" aria-hidden="true">
         <div className="drop-ticker-track">
           {Array.from({ length: 6 }).map((_, i) => (
             <span key={i} className="drop-ticker-item">
-              DROP {DROP_NUMBER}
+              DROP {NEXT_DROP.number}
               <span className="drop-ticker-dot">•</span>
-              LIVE NOW
+              {isLive ? "LIVE NOW" : "COMING SOON"}
               <span className="drop-ticker-dot">•</span>
-              {DROP_NAME}
+              {NEXT_DROP.name}
               <span className="drop-ticker-dot">•</span>
             </span>
           ))}
         </div>
       </div>
 
-      {/* Hero */}
-      <DropHero
-        drop={{
-          number: DROP_NUMBER,
-          name: DROP_NAME,
-          tagline: DROP_TAGLINE,
-          products,
-          loading,
-        }}
-      />
-
-      {/* Header */}
-      <div ref={headerRef} className="container drop-header reveal">
-        <div>
-          <p className="section-eyebrow">THE COLLECTION</p>
-          <h2 className="drop-header-title">
-            {products.length} PIECES.
-            <br />
-            ONE FABRIC.
-          </h2>
+      {/* ============================================
+          HERO — Coming Soon
+          ============================================ */}
+      <div ref={headerRef} className="container drop-coming-hero reveal">
+        <div className="drop-coming-status">
+          <span className="drop-coming-status-dot" />
+          {isLive ? "LIVE NOW" : "COMING SOON"}
         </div>
-        <p className="drop-header-meta">YANGON</p>
+
+        <p className="drop-coming-eyebrow">
+          DROP {NEXT_DROP.number} — {NEXT_DROP.name}
+        </p>
+
+        <h1 className="drop-coming-title">
+          <span>SOON.</span>
+          <span className="drop-coming-title-outline">
+            VERY SOON.
+          </span>
+        </h1>
+
+        <p className="drop-coming-desc">
+          {NEXT_DROP.description}
+        </p>
+
+        <div className="drop-coming-actions">
+          <Link to="/shop" className="btn btn-primary drop-coming-cta">
+            <span>SHOP CURRENT DROP</span>
+            <span className="drop-coming-cta-arrow">→</span>
+          </Link>
+        </div>
       </div>
 
-      {/* Items grid */}
-      {loading && (
-        <p className="section-loading container">Loading…</p>
-      )}
+      {/* ============================================
+          COUNTDOWN
+          ============================================ */}
+      <div
+        ref={countdownRef}
+        className="container drop-coming-countdown reveal"
+      >
+        <p className="drop-coming-countdown-label">
+          {isLive ? "DROP IS LIVE" : "NEXT DROP IN"}
+        </p>
 
-      {!loading && !error && (
-        <div
-          ref={gridRef}
-          className="container drop-grid reveal-stagger"
-        >
-          {products.map((item, i) => {
-            const status = getProductStatus(item);
-            const isSold = status === "sold";
-            const pct = item.stock > 0 ? 100 : 0;
-
-            return (
-              <Link
-                key={item.id}
-                to={isSold ? "#" : `/product/${item.slug}`}
-                className={`drop-card ${isSold ? "is-sold" : ""}`}
-                data-cursor={isSold ? "SOLD" : "VIEW"}
-                onClick={(e) => {
-                  if (isSold) e.preventDefault();
-                }}
-                aria-disabled={isSold}
-              >
-                <div className="drop-card-image">
-                  <img src={item.image} alt={item.name} />
-                  <span className="drop-card-num">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-
-                  {isSold && (
-                    <span className="drop-card-sold">SOLD OUT</span>
-                  )}
-                  {status === "low" && !isSold && (
-                    <span className="drop-card-low">LOW STOCK</span>
-                  )}
-                </div>
-
-                <div className="drop-card-info">
-                  <div className="drop-card-info-top">
-                    <p className="drop-card-colorway">
-                      {item.colorNames[0]?.name || "—"}
-                    </p>
-                    <p className="drop-card-price">
-                      {formatPrice(item.price, item.currency)}
-                    </p>
-                  </div>
-
-                  <p className="drop-card-name">{item.name}</p>
-
-                  {!isSold && (
-                    <div className="drop-card-stock">
-                      <div className="drop-card-stock-bar">
-                        <div
-                          className="drop-card-stock-fill"
-                          style={{ transform: `scaleX(${pct / 100})` }}
-                        />
-                      </div>
-                      <p className="drop-card-stock-label">
-                        {item.stock} IN STOCK
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </Link>
-            );
-          })}
+        <div className="drop-countdown">
+          <div className="drop-countdown-cell">
+            <span className="drop-countdown-num">{pad(days)}</span>
+            <span className="drop-countdown-unit">DAYS</span>
+          </div>
+          <span className="drop-countdown-sep">:</span>
+          <div className="drop-countdown-cell">
+            <span className="drop-countdown-num">{pad(hours)}</span>
+            <span className="drop-countdown-unit">HRS</span>
+          </div>
+          <span className="drop-countdown-sep">:</span>
+          <div className="drop-countdown-cell">
+            <span className="drop-countdown-num">{pad(minutes)}</span>
+            <span className="drop-countdown-unit">MIN</span>
+          </div>
+          <span className="drop-countdown-sep">:</span>
+          <div className="drop-countdown-cell">
+            <span className="drop-countdown-num">{pad(seconds)}</span>
+            <span className="drop-countdown-unit">SEC</span>
+          </div>
         </div>
-      )}
 
-      {/* Notify */}
+        <p className="drop-coming-countdown-date">
+          {NEXT_DROP.releaseDate.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          })}
+        </p>
+      </div>
+
+      {/* ============================================
+          TEASER — Editorial
+          ============================================ */}
+      <div ref={teaserRef} className="container drop-coming-teaser reveal">
+        <div className="drop-coming-teaser-grid">
+          <div className="drop-coming-teaser-item">
+            <span className="drop-coming-teaser-num">01</span>
+            <p className="drop-coming-teaser-title">HEAVY</p>
+            <p className="drop-coming-teaser-text">
+              Weight you can feel.
+            </p>
+          </div>
+          <div className="drop-coming-teaser-item">
+            <span className="drop-coming-teaser-num">02</span>
+            <p className="drop-coming-teaser-title">CLEAN</p>
+            <p className="drop-coming-teaser-text">
+              Nothing extra.
+            </p>
+          </div>
+          <div className="drop-coming-teaser-item">
+            <span className="drop-coming-teaser-num">03</span>
+            <p className="drop-coming-teaser-title">EVERYDAY</p>
+            <p className="drop-coming-teaser-text">
+              Made to be worn.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ============================================
+          NOTIFY — Email signup
+          ============================================ */}
       <div ref={notifyRef} className="drop-notify reveal reveal--story">
         <div className="container drop-notify-inner">
           <div>
-            <p className="section-eyebrow">NEXT DROP</p>
+            <p className="section-eyebrow">BE FIRST TO KNOW</p>
             <h2 className="drop-notify-title">
-              BE FIRST
+              JOIN THE
               <br />
-              TO KNOW.
+              WAITLIST.
             </h2>
           </div>
 
-          <form
-            className="drop-notify-form"
-            onSubmit={(e) => e.preventDefault()}
-          >
-            <input
-              type="email"
-              placeholder="EMAIL ADDRESS"
-              className="drop-notify-input"
-              required
-            />
-            <button
-              type="submit"
-              className="btn btn-primary drop-notify-btn"
+          {submitted ? (
+            <div className="drop-notify-success">
+              <p className="drop-notify-success-title">
+                ✓ YOU'RE ON THE LIST
+              </p>
+              <p className="drop-notify-success-text">
+                We'll email you when Drop {NEXT_DROP.number} goes live.
+              </p>
+            </div>
+          ) : (
+            <form
+              className="drop-notify-form"
+              onSubmit={handleNotify}
             >
-              <span>NOTIFY ME</span>
-              <span className="drop-notify-arrow">→</span>
-            </button>
-          </form>
+              <input
+                type="email"
+                placeholder="EMAIL ADDRESS"
+                className="drop-notify-input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <button
+                type="submit"
+                className="btn btn-primary drop-notify-btn"
+              >
+                <span>NOTIFY ME</span>
+                <span className="drop-notify-arrow">→</span>
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </section>
