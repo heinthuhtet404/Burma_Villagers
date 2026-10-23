@@ -16,9 +16,10 @@ export default function Home() {
   const storyImgRef = useParallax({ speed: 0.12 });
   const gridRef = useRef(null);
 
-  const { products, loading, error } = useProducts({ onlyNew: true });
+  // NEW DROP မဟုတ်တော့ဘဲ all products ဆွဲ
+  const { products, loading, error, total } = useProducts();
 
-  // 🎯 Reveal grid as soon as products are rendered
+  // Reveal grid as soon as products are rendered
   useEffect(() => {
     if (loading || products.length === 0) return;
     const el = gridRef.current;
@@ -33,15 +34,15 @@ export default function Home() {
     <>
       <Hero />
 
-      {/* ============ NEW DROP ============ */}
+      {/* ============ SHOP SECTION ============ */}
       <section className="section new-drop">
         <div className="container">
           <div ref={newDropRef} className="section-head reveal">
             <div>
-              <p className="section-eyebrow">NEW DROP</p>
-              <h2 className="section-title">350 GSM AIR LAYER</h2>
+              <p className="section-eyebrow">ALL PRODUCTS</p>
+              <h2 className="section-title">SHOP</h2>
             </div>
-            <Link to="/new-drop" className="section-link">
+            <Link to="/shop" className="section-link">
               VIEW ALL →
             </Link>
           </div>
@@ -57,17 +58,41 @@ export default function Home() {
           )}
 
           {!loading && !error && (
-            <div
-              ref={gridRef}
-              className="product-grid reveal-stagger"
-            >
-              {products.slice(0, 4).map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
+            <>
+              <p className="shop-count">
+                {products.length} PRODUCT{products.length !== 1 ? "S" : ""}
+                {total != null && total !== products.length
+                  ? ` OF ${total}`
+                  : ""}
+              </p>
+
+              <div
+                ref={gridRef}
+                className="product-grid reveal-stagger"
+              >
+                {products.slice(0, 8).map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+
+              {/* Home မှာ pagination မလို — Shop page ကို ညွှန်း */}
+              {products.length > 8 && (
+                <div className="shop-loadmore">
+                  <Link to="/shop" className="shop-loadmore-btn">
+                    <span>VIEW ALL PRODUCTS</span>
+                    <span className="shop-loadmore-count">
+                      ({products.length}{total != null ? ` / ${total}` : ""})
+                    </span>
+                  </Link>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
+
+      {/* ============ MARQUEE ============ */}
+      <ScrollMarquee />
 
       {/* ============ 350 GSM STORY ============ */}
       <section className="section story">
@@ -98,9 +123,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* ============ MARQUEE ============ */}
-      <ScrollMarquee />
 
       {/* ============ BRAND STATEMENT ============ */}
       <section className="section brand-statement">

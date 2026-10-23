@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -16,14 +16,16 @@ const DELIVERY = {
   standard: {
     id: "standard",
     label: "STANDARD",
-    note: "2–4 days · Yangon only",
+    note: "2–4 days · waiting time",
     price: 0,
+    comingSoon: false,
   },
   express: {
     id: "express",
     label: "EXPRESS",
-    note: "Next day · Yangon only",
+    note: "Next day · waiting time",
     price: 3000,
+    comingSoon: true,
   },
 };
 
@@ -36,7 +38,7 @@ const STEPS = [
 
 export default function Checkout() {
   const { items, subtotal, count, clear } = useCart();
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
@@ -60,6 +62,10 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // Lock message state
+  const [showSignInMessage, setShowSignInMessage] = useState(false);
+  const signInTimerRef = useRef(null);
+
   // UI-display only (server recomputes)
   const deliveryFee = DELIVERY[delivery].price;
   const total = subtotal + deliveryFee;
@@ -67,6 +73,31 @@ export default function Checkout() {
   const isCod = paymentMethod === "cod";
   const depositAmount = isCod ? PAYMENT_CONFIG.cod.depositAmount : 0;
   const amountToPay = isCod ? depositAmount : total;
+
+  const requireSignIn = () => {
+    setShowSignInMessage(true);
+    window.clearTimeout(signInTimerRef.current);
+    signInTimerRef.current = window.setTimeout(
+      () => setShowSignInMessage(false),
+      3200
+    );
+  };
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(signInTimerRef.current);
+    };
+  }, []);
+
+  const applyAddress = (addr) => {
+    setForm((f) => ({
+      ...f,
+      name: addr.name,
+      phone: addr.phone,
+      address: addr.address,
+      city: addr.city,
+    }));
+  };
 
   /* ============================================================
      Auto-fill from profile + addresses
@@ -96,16 +127,6 @@ export default function Checkout() {
       .catch((err) => console.warn("addresses load:", err));
     // eslint-disable-next-line
   }, [user, profile]);
-
-  const applyAddress = (addr) => {
-    setForm((f) => ({
-      ...f,
-      name: addr.name,
-      phone: addr.phone,
-      address: addr.address,
-      city: addr.city,
-    }));
-  };
 
   const handleSelectAddress = (addr) => {
     applyAddress(addr);
@@ -152,6 +173,10 @@ export default function Checkout() {
      ============================================================ */
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
+    if (!user) {
+      requireSignIn();
+      return;
+    }
     if (step !== 4) return;
     if (!isInfoValid || !isPaymentValid() || count === 0) return;
 
@@ -187,6 +212,23 @@ export default function Checkout() {
   };
 
   /* ============================================================
+     AUTH LOADING GUARD
+     ============================================================ */
+  if (authLoading) {
+    return (
+      <section className="checkout">
+        <div className="container checkout-empty">
+          <p className="section-eyebrow">CHECKOUT</p>
+          <p className="checkout-loading">
+            <span className="checkout-loading-dot" />
+            CHECKING ACCOUNT…
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  /* ============================================================
      EMPTY CART GUARD
      ============================================================ */
   if (count === 0 && !submitting) {
@@ -211,7 +253,10 @@ export default function Checkout() {
   }
 
   return (
-    <section className="checkout">
+    <section
+      className={`checkout ${!user ? "is-locked" : ""}`}
+      data-locked={!user ? "true" : undefined}
+    >
       <div className="container">
         <nav className="pdp-breadcrumb checkout-breadcrumb">
           <Link to="/">HOME</Link>
@@ -220,15 +265,6 @@ export default function Checkout() {
           <span className="pdp-breadcrumb-sep">/</span>
           <span className="pdp-breadcrumb-current">CHECKOUT</span>
         </nav>
-
-        {!user && (
-          <div className="checkout-signin-prompt">
-            <p>
-              Already have an account?{" "}
-              <Link to="/login">Sign in</Link> for faster checkout.
-            </p>
-          </div>
-        )}
 
         <div className="checkout-inner">
           <form className="checkout-form" onSubmit={handlePlaceOrder}>
@@ -245,9 +281,8 @@ export default function Checkout() {
                   <button
                     type="button"
                     key={s.n}
-                    className={`checkout-step ${
-                      step >= s.n ? "is-active" : ""
-                    } ${step === s.n ? "is-current" : ""}`}
+                    className={`checkout-step ${step >= s.n ? "is-active" : ""
+                      } ${step === s.n ? "is-current" : ""}`}
                     onClick={() => {
                       if (s.n < step) setStep(s.n);
                     }}
@@ -260,9 +295,7 @@ export default function Checkout() {
               </div>
             </header>
 
-            {/* ============================================
-                STEP 1 — INFO
-                ============================================ */}
+            {/* STEP 1 — INFO */}
             {step === 1 && (
               <div className="checkout-section">
                 <p className="checkout-section-title">
@@ -279,9 +312,8 @@ export default function Checkout() {
                         <button
                           type="button"
                           key={a.id}
-                          className={`checkout-address-card ${
-                            selectedAddressId === a.id ? "is-active" : ""
-                          }`}
+                          className={`checkout-address-card ${selectedAddressId === a.id ? "is-active" : ""
+                            }`}
                           onClick={() => handleSelectAddress(a)}
                         >
                           <div className="checkout-address-head">
@@ -402,63 +434,67 @@ export default function Checkout() {
               </div>
             )}
 
-            {/* ============================================
-                STEP 2 — DELIVERY
-                ============================================ */}
+            {/* STEP 2 — DELIVERY */}
             {step === 2 && (
               <div className="checkout-section">
                 <p className="checkout-section-title">02 — DELIVERY</p>
 
                 <div className="checkout-options">
-                  {Object.values(DELIVERY).map((d) => (
-                    <label
-                      key={d.id}
-                      className={`checkout-option ${
-                        delivery === d.id ? "is-active" : ""
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="delivery"
-                        value={d.id}
-                        checked={delivery === d.id}
-                        onChange={() => setDelivery(d.id)}
-                      />
-                      <span className="checkout-option-radio" />
-                      <span className="checkout-option-info">
-                        <span className="checkout-option-label">
-                          {d.label}
+                  {Object.values(DELIVERY).map((d) => {
+                    const isDisabled = d.comingSoon;
+                    const isActive = delivery === d.id && !isDisabled;
+
+                    return (
+                      <label
+                        key={d.id}
+                        className={`checkout-option ${isActive ? "is-active" : ""} ${isDisabled ? "is-disabled" : ""
+                          }`}
+                      >
+                        <input
+                          type="radio"
+                          name="delivery"
+                          value={d.id}
+                          checked={delivery === d.id}
+                          onChange={() => setDelivery(d.id)}
+                          disabled={isDisabled}
+                        />
+                        <span className="checkout-option-radio" />
+                        <span className="checkout-option-info">
+                          <span className="checkout-option-label">
+                            {d.label}
+                            {isDisabled && (
+                              <span className="checkout-option-badge">
+                                COMING SOON
+                              </span>
+                            )}
+                          </span>
+                          <span className="checkout-option-note">{d.note}</span>
                         </span>
-                        <span className="checkout-option-note">
-                          {d.note}
+                        <span className="checkout-option-price">
+                          {d.comingSoon
+                            ? "—"
+                            : d.price === 0
+                              ? ""
+                              : formatPrice(d.price, "MMK")}
                         </span>
-                      </span>
-                      <span className="checkout-option-price">
-                        {d.price === 0
-                          ? "FREE"
-                          : formatPrice(d.price, "MMK")}
-                      </span>
-                    </label>
-                  ))}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* ============================================
-                STEP 3 — PAYMENT
-                ============================================ */}
+            {/* STEP 3 — PAYMENT */}
             {step === 3 && (
               <div className="checkout-section">
                 <p className="checkout-section-title">03 — PAYMENT</p>
 
-                {/* Payment methods */}
                 <div className="checkout-options">
                   {Object.values(PAYMENT_CONFIG).map((p) => (
                     <label
                       key={p.id}
-                      className={`checkout-option ${
-                        paymentMethod === p.id ? "is-active" : ""
-                      }`}
+                      className={`checkout-option ${paymentMethod === p.id ? "is-active" : ""
+                        }`}
                     >
                       <input
                         type="radio"
@@ -488,7 +524,6 @@ export default function Checkout() {
                   ))}
                 </div>
 
-                {/* Account info + Proof upload */}
                 {paymentMethod && (
                   <div className="checkout-payment-detail">
                     <div className="checkout-payment-accounts">
@@ -531,7 +566,6 @@ export default function Checkout() {
                       )}
                     </div>
 
-                    {/* Proof upload */}
                     <PaymentProofUpload
                       value={paymentProofUrl}
                       onChange={setPaymentProofUrl}
@@ -570,9 +604,7 @@ export default function Checkout() {
               </div>
             )}
 
-            {/* ============================================
-                STEP 4 — REVIEW
-                ============================================ */}
+            {/* STEP 4 — REVIEW */}
             {step === 4 && (
               <div className="checkout-section">
                 <p className="checkout-section-title">04 — REVIEW</p>
@@ -605,7 +637,7 @@ export default function Checkout() {
                   <div className="checkout-review-block">
                     <p className="checkout-review-key">PAYMENT</p>
                     <p className="checkout-review-val">
-                      {PAYMENT_CONFIG[paymentMethod]?.label}
+                      {PAYMENT_CONFIG[paymentMethod]?.label || "—"}
                       <br />
                       <span className="checkout-review-muted">
                         {isCod
@@ -616,7 +648,6 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                {/* Proof preview */}
                 {paymentProofUrl && (
                   <div className="checkout-review-proof">
                     <p className="checkout-review-key">
@@ -674,9 +705,7 @@ export default function Checkout() {
             </div>
           </form>
 
-          {/* ============================================
-              SUMMARY
-              ============================================ */}
+          {/* SUMMARY */}
           <aside className="checkout-summary">
             <div className="checkout-summary-head">
               <p className="checkout-summary-title">ORDER SUMMARY</p>
@@ -716,7 +745,7 @@ export default function Checkout() {
                 <span>DELIVERY</span>
                 <span>
                   {deliveryFee === 0
-                    ? "FREE"
+                    ? "—"
                     : formatPrice(deliveryFee, "MMK")}
                 </span>
               </div>
@@ -735,6 +764,46 @@ export default function Checkout() {
           </aside>
         </div>
       </div>
+
+      {/* LOCK OVERLAY */}
+      {!user && (
+        <div
+          className="checkout-lock"
+          onClick={requireSignIn}
+          role="presentation"
+        />
+      )}
+
+      {/* SIGN-IN TOAST */}
+      {!user && (
+        <div
+          className={`checkout-lock-toast ${showSignInMessage ? "is-visible" : ""
+            }`}
+          role="alert"
+        >
+          <p className="checkout-lock-toast-title">SIGN IN REQUIRED</p>
+          <p className="checkout-lock-toast-text">
+            Please sign in or create an account before completing your
+            order.
+          </p>
+          <div className="checkout-lock-toast-actions">
+            <Link
+              to="/login"
+              state={{ from: "/checkout" }}
+              className="btn btn-primary checkout-lock-toast-btn"
+            >
+              SIGN IN →
+            </Link>
+            <Link
+              to="/signup"
+              state={{ from: "/checkout" }}
+              className="checkout-lock-toast-link"
+            >
+              CREATE ACCOUNT
+            </Link>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

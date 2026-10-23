@@ -1,13 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import { formatPrice } from "../lib/format";
-
-const FREE_SHIP_THRESHOLD = 50000;
 
 export default function CartDrawer({ open, onClose }) {
   const { items, subtotal, count, remove, updateQty } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
+
+  const [showSignIn, setShowSignIn] = useState(false);
 
   // Lock body scroll
   useEffect(() => {
@@ -28,12 +30,28 @@ export default function CartDrawer({ open, onClose }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const remaining = Math.max(FREE_SHIP_THRESHOLD - subtotal, 0);
-  const progress = Math.min(subtotal / FREE_SHIP_THRESHOLD, 1);
+  // Reset sign-in prompt when drawer closes
+  useEffect(() => {
+    if (!open) setShowSignIn(false);
+  }, [open]);
 
   const handleCheckout = () => {
+    if (!user) {
+      setShowSignIn(true);
+      return;
+    }
     onClose();
     navigate("/checkout");
+  };
+
+  const handleGoSignIn = () => {
+    onClose();
+    navigate("/login", { state: { from: "/checkout" } });
+  };
+
+  const handleGoSignUp = () => {
+    onClose();
+    navigate("/signup", { state: { from: "/checkout" } });
   };
 
   return (
@@ -67,29 +85,6 @@ export default function CartDrawer({ open, onClose }) {
             <span />
           </button>
         </div>
-
-        {/* Free shipping bar */}
-        {count > 0 && (
-          <div className="cart-ship">
-            {remaining > 0 ? (
-              <p className="cart-ship-msg">
-                Add{" "}
-                <strong>{formatPrice(remaining, "MMK")}</strong> more for
-                free delivery
-              </p>
-            ) : (
-              <p className="cart-ship-msg cart-ship-msg--success">
-                ● You've unlocked free delivery
-              </p>
-            )}
-            <div className="cart-ship-bar">
-              <div
-                className="cart-ship-fill"
-                style={{ transform: `scaleX(${progress})` }}
-              />
-            </div>
-          </div>
-        )}
 
         {/* Items */}
         <div className="cart-drawer-body">
@@ -152,18 +147,14 @@ export default function CartDrawer({ open, onClose }) {
                     <div className="cart-item-bottom">
                       <div className="cart-qty">
                         <button
-                          onClick={() =>
-                            updateQty(item.key, item.qty - 1)
-                          }
+                          onClick={() => updateQty(item.key, item.qty - 1)}
                           aria-label="Decrease quantity"
                         >
                           −
                         </button>
                         <span>{item.qty}</span>
                         <button
-                          onClick={() =>
-                            updateQty(item.key, item.qty + 1)
-                          }
+                          onClick={() => updateQty(item.key, item.qty + 1)}
                           aria-label="Increase quantity"
                         >
                           +
@@ -191,21 +182,55 @@ export default function CartDrawer({ open, onClose }) {
               </div>
               <div className="cart-summary-row cart-summary-row--muted">
                 <span>SHIPPING</span>
-                <span>{remaining > 0 ? "Calculated" : "FREE"}</span>
+                <span>Calculated at checkout</span>
               </div>
             </div>
 
-            <button
-              className="btn btn-primary cart-checkout"
-              onClick={handleCheckout}
-            >
-              <span>CHECKOUT</span>
-              <span className="cart-checkout-arrow">→</span>
-            </button>
+            {showSignIn ? (
+              <div className="cart-signin-prompt">
+                <p className="cart-signin-title">SIGN IN REQUIRED</p>
+                <p className="cart-signin-text">
+                  Please sign in or create an account to continue to checkout.
+                </p>
+                <div className="cart-signin-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary cart-signin-btn"
+                    onClick={handleGoSignIn}
+                  >
+                    SIGN IN →
+                  </button>
+                  <button
+                    type="button"
+                    className="cart-signin-link"
+                    onClick={handleGoSignUp}
+                  >
+                    CREATE ACCOUNT
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="cart-signin-back"
+                  onClick={() => setShowSignIn(false)}
+                >
+                  ← BACK TO BAG
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  className="btn btn-primary cart-checkout"
+                  onClick={handleCheckout}
+                >
+                  <span>CHECKOUT</span>
+                  <span className="cart-checkout-arrow">→</span>
+                </button>
 
-            <p className="cart-drawer-note">
-              Free delivery within Yangon · Taxes included
-            </p>
+                <p className="cart-drawer-note">
+                  Taxes included · Delivery calculated at checkout
+                </p>
+              </>
+            )}
           </div>
         )}
       </aside>

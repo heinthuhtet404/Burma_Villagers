@@ -34,6 +34,7 @@ export default function Navbar() {
             </button>
 
             <nav className="navbar-links">
+              <Link to="/">BV</Link>
               <Link to="/shop">SHOP</Link>
               <Link to="/new-drop">NEW DROP</Link>
               <Link to="/about">ABOUT</Link>

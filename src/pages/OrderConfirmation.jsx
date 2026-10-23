@@ -78,12 +78,21 @@ export default function OrderConfirmation() {
     );
   }
 
-  const firstName = order.customerName.split(" ")[0].toUpperCase();
-  const isCod = order.paymentMethod === "cod";
-  const paymentInfo = PAYMENT_CONFIG[order.paymentMethod] || {};
+  const firstName = (order.customerName || "there")
+    .split(" ")[0]
+    .toUpperCase();
 
-  const depositAmount = order.depositAmount || 0;
-  const remainingAmount = order.total - depositAmount;
+  const isCod = order.paymentMethod === "cod";
+  const paymentLabel =
+    PAYMENT_CONFIG[order.paymentMethod]?.label ||
+    order.paymentMethod ||
+    "—";
+
+  const items = order.items || [];
+
+  const total = Number(order.total) || 0;
+  const depositAmount = Number(order.depositAmount) || 0;
+  const remainingAmount = total - depositAmount;
 
   return (
     <section className="confirmation">
@@ -121,27 +130,25 @@ export default function OrderConfirmation() {
         <div className="confirmation-grid">
           <div className="confirmation-block">
             <p className="confirmation-block-key">ORDER №</p>
-            <p className="confirmation-block-val">{order.orderNumber}</p>
+            <p className="confirmation-block-val">
+              {order.orderNumber || "—"}
+            </p>
           </div>
           <div className="confirmation-block">
             <p className="confirmation-block-key">TOTAL</p>
             <p className="confirmation-block-val">
-              {formatPrice(order.total, "MMK")}
+              {formatPrice(total, "MMK")}
             </p>
           </div>
           <div className="confirmation-block">
             <p className="confirmation-block-key">DELIVERY</p>
             <p className="confirmation-block-val">
-              {order.deliveryMethod.toUpperCase()}
+              {(order.deliveryMethod || "—").toUpperCase()}
             </p>
           </div>
           <div className="confirmation-block">
             <p className="confirmation-block-key">PAYMENT</p>
-            <p className="confirmation-block-val">
-              {order.paymentMethod === "kpay_wave"
-                ? "KPAY / WAVE"
-                : "COD"}
-            </p>
+            <p className="confirmation-block-val">{paymentLabel}</p>
           </div>
         </div>
 
@@ -174,6 +181,9 @@ export default function OrderConfirmation() {
               <img
                 src={order.paymentProofUrl}
                 alt="Payment proof"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
               />
             </div>
             {order.paymentReference && (
@@ -185,30 +195,46 @@ export default function OrderConfirmation() {
         )}
 
         {/* Items */}
-        {order.items.length > 0 && (
+        {items.length > 0 && (
           <div className="confirmation-items">
             <p className="confirmation-items-title">
-              ITEMS ({order.items.length})
+              ITEMS ({items.length})
             </p>
 
             <ul className="confirmation-items-list">
-              {order.items.map((item) => (
-                <li key={item.id} className="confirmation-item">
+              {items.map((item, idx) => (
+                <li
+                  key={item.id || `${item.name}-${idx}`}
+                  className="confirmation-item"
+                >
                   <div className="confirmation-item-image">
                     {item.image ? (
-                      <img src={item.image} alt={item.name} />
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
                     ) : (
-                      <span />
+                      <span className="confirmation-item-placeholder" />
                     )}
                   </div>
                   <div className="confirmation-item-info">
-                    <p className="confirmation-item-name">{item.name}</p>
+                    <p className="confirmation-item-name">
+                      {item.name || "Item"}
+                    </p>
                     <p className="confirmation-item-meta">
-                      SIZE {item.size} · QTY {item.quantity}
+                      {item.size ? `SIZE ${item.size} · ` : ""}
+                      QTY {item.quantity || 1}
                     </p>
                   </div>
                   <p className="confirmation-item-price">
-                    {formatPrice(item.price * item.quantity, "MMK")}
+                    {formatPrice(
+                      (Number(item.price) || 0) *
+                        (Number(item.quantity) || 1),
+                      "MMK"
+                    )}
                   </p>
                 </li>
               ))}

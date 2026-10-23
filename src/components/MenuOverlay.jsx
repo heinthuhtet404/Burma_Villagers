@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 
 const LINKS = [
+  { to: "/", label: "BV", meta: "00" },
   { to: "/shop", label: "SHOP", meta: "01" },
   { to: "/new-drop", label: "NEW DROP", meta: "02" },
   { to: "/about", label: "ABOUT", meta: "03" },

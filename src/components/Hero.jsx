@@ -98,7 +98,7 @@ export default function Hero() {
           </div>
           <div className="hero-swiss-bottom-item">
             <span className="hero-swiss-bottom-key">SIZES</span>
-            <span className="hero-swiss-bottom-val">S — XL</span>
+            <span className="hero-swiss-bottom-val">FREE SIZE</span>
           </div>
           <div className="hero-swiss-bottom-item">
             <span className="hero-swiss-bottom-key">FROM</span>
