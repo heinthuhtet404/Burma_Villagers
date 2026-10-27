@@ -3,10 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import useProduct from "../hooks/useProduct";
 import SplitText from "../components/SplitText";
-import SizeGuide from "../components/SizeGuide";
 import { formatPrice } from "../lib/format";
-import { getProductStatus } from "../lib/products";
-import { getVariantStock } from "../lib/products";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -14,33 +11,11 @@ export default function ProductDetail() {
 
   const { add } = useCart();
 
-  const [color, setColor] = useState(null);
-  const [size, setSize] = useState(null);
-  const [switching, setSwitching] = useState(false);
   const [added, setAdded] = useState(false);
-  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
-  const switchTimer = useRef(null);
   const addTimer = useRef(null);
-  // Add near the top of component
-  const [variantStock, setVariantStock] = useState(null);
-
-  // When product loads
-  useEffect(() => {
-    if (!product?.id) return;
-    getVariantStock(product.id).then(setVariantStock).catch(() => { });
-  }, [product?.id]);
-
-  // Reset selections when product changes
-  useEffect(() => {
-    if (product) {
-      setColor(product.colors[0] || null);
-      setSize(null);
-    }
-  }, [product?.id]);
 
   useEffect(() => {
     return () => {
-      clearTimeout(switchTimer.current);
       clearTimeout(addTimer.current);
     };
   }, []);
@@ -68,37 +43,7 @@ export default function ProductDetail() {
     );
   }
 
-  const status = getProductStatus(product);
-  const isSold = status === "sold";
-
-  // Find variants matching current color
-  const colorVariants = product.variants.filter(
-    (v) => v.color === color
-  );
-
-  // Sizes available for current color (with stock)
-  const sizeStock = new Map(
-    colorVariants.map((v) => [v.size, v.stock])
-  );
-
-  // Selected size stock
-  const selectedVariant = colorVariants.find((v) => v.size === size);
-  const canAdd = selectedVariant && selectedVariant.stock > 0 && !isSold;
-
-  const handleColorChange = (nextColor) => {
-    if (nextColor === color) return;
-    setSwitching(true);
-    clearTimeout(switchTimer.current);
-    switchTimer.current = setTimeout(() => {
-      setColor(nextColor);
-      setSize(null); // reset size when color changes
-      setSwitching(false);
-    }, 180);
-  };
-
   const handleAddToCart = () => {
-    if (!canAdd) return;
-
     add(
       {
         id: product.id,
@@ -107,7 +52,7 @@ export default function ProductDetail() {
         currency: product.currency,
         image: product.image,
       },
-      { size, color, qty: 1 }
+      { qty: 1 }
     );
 
     setAdded(true);
@@ -130,18 +75,11 @@ export default function ProductDetail() {
           <div className="pdp-media">
             <div className="pdp-image">
               <div className="pdp-image-inner">
-                <img
-                  className={switching ? "is-switching" : ""}
-                  src={product.image}
-                  alt={product.name}
-                />
+                <img src={product.image} alt={product.name} />
               </div>
 
-              {product.isNew && !isSold && (
+              {product.isNew && (
                 <span className="product-card-badge">NEW</span>
-              )}
-              {isSold && (
-                <span className="pdp-sold-overlay">SOLD OUT</span>
               )}
 
               <span className="pdp-image-index">01 / 01</span>
@@ -161,94 +99,12 @@ export default function ProductDetail() {
 
             <p className="pdp-desc">{product.description}</p>
 
-            {!isSold && (
-              <div className="pdp-stock">
-                <p className="pdp-stock-label">
-                  {product.stock} IN STOCK
-                </p>
-                <div className="pdp-stock-bar">
-                  <div
-                    className="pdp-stock-fill"
-                    style={{
-                      transform: `scaleX(${Math.min(
-                        product.stock / 50,
-                        1
-                      )})`,
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Color */}
-            <div className="pdp-field">
-              <div className="pdp-field-head">
-                <span className="pdp-field-label">COLOR</span>
-                <span className="pdp-field-value">{color}</span>
-              </div>
-              <div className="pdp-colors">
-                {product.colors.map((c) => (
-                  <button
-                    key={c}
-                    className={`pdp-swatch ${color === c ? "is-active" : ""
-                      }`}
-                    style={{ background: c }}
-                    onClick={() => handleColorChange(c)}
-                    aria-label={`Color ${c}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Size */}
-            <div className="pdp-field">
-              <div className="pdp-field-head">
-                <span className="pdp-field-label">SIZE</span>
-                <button
-                  type="button"
-                  className="pdp-size-guide-link"
-                  onClick={() => setSizeGuideOpen(true)}
-                >
-                  SIZE GUIDE →
-                </button>
-              </div>
-              <div className="pdp-sizes">
-                {product.sizes.map((s) => {
-                  const key = `${s}-${color}`;
-                  const stock = variantStock?.[key] ?? sizeStock.get(s) ?? 0;
-                  const isUnavailable = stock <= 0;
-                  return (
-                    <button
-                      key={s}
-                      className={`pdp-size ${size === s ? "is-active" : ""}`}
-                      onClick={() => setSize(s)}
-                      disabled={isUnavailable || isSold}
-                    >
-                      {s}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             <button
-              className={`btn btn-primary pdp-add ${added ? "is-added" : ""
-                }`}
-              disabled={!canAdd}
+              className={`btn btn-primary pdp-add ${added ? "is-added" : ""}`}
               onClick={handleAddToCart}
             >
-              <span>
-                {isSold
-                  ? "SOLD OUT"
-                  : !size
-                    ? "SELECT A SIZE"
-                    : !canAdd
-                      ? "OUT OF STOCK"
-                      : "ADD TO BAG"}
-              </span>
-              {canAdd && (
-                <span className="pdp-add-arrow" aria-hidden="true">→</span>
-              )}
+              <span>{added ? "ADDED" : "ADD TO BAG"}</span>
+              <span className="pdp-add-arrow" aria-hidden="true">→</span>
             </button>
 
             <div className="pdp-meta">
@@ -258,11 +114,6 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
-
-      <SizeGuide
-        open={sizeGuideOpen}
-        onClose={() => setSizeGuideOpen(false)}
-      />
     </section>
   );
 }
