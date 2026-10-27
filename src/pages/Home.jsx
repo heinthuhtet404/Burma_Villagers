@@ -3,7 +3,7 @@ import Hero from "../components/Hero";
 import ProductCard from "../components/ProductCard";
 import ScrollMarquee from "../components/ScrollMarquee";
 import { Link } from "react-router-dom";
-import storyImg from "../images/story.jpg";
+import storyImg from "../images/four_layer-airlayer-lightning.jpg";
 import useScrollReveal from "../hooks/useScrollReveal";
 import useParallax from "../hooks/useParallax";
 import useProducts from "../hooks/useProducts";
