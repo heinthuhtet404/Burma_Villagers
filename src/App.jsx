@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
-import { useState } from "react";
 import AnnouncementBar from "./components/AnnouncementBar";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -13,6 +12,7 @@ import BackToTop from "./components/BackToTop";
 import Toast from "./components/Toast";
 import PageTransition from "./components/PageTransition";
 import ProtectedRoute from "./components/ProtectedRoute";
+import SiteNoticeBar from "./components/SiteNoticeBar";
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import NewDrop from "./pages/NewDrop";
@@ -46,9 +46,6 @@ import AdminProductNew from "./admin/pages/AdminProductNew";
 import AdminProductEdit from "./admin/pages/AdminProductEdit";
 import AdminOrders from "./admin/pages/AdminOrders";
 import AdminOrderDetail from "./admin/pages/AdminOrderDetail";
-
-import UnderConstructionAlert from "./components/UnderConstructionAlert";
-import VpnAlert from "./components/VpnAlert";
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -117,7 +114,6 @@ function AdminRoutes() {
 
 export default function App() {
   const isAdminRoute = window.location.pathname.startsWith("/admin");
-  const [noticeDone, setNoticeDone] = useState(false);
 
   if (isAdminRoute) {
     return (
@@ -134,12 +130,7 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <CartProvider>
-            {/* Alert 1 — အရင်ပြ */}
-            <UnderConstructionAlert onDone={() => setNoticeDone(true)} />
-
-            {/* Alert 2 — Alert 1 ပြီးမှ ပြ */}
-            {noticeDone && <VpnAlert />}
-
+            <SiteNoticeBar />
             <ScrollToTop />
             <ScrollProgress />
             <CustomCursor />

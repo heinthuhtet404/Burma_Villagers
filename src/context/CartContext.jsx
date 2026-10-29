@@ -16,7 +16,23 @@ function cartReducer(state, action) {
 
       if (!product) return state;
 
-      const key = `${product.id}-${size}-${color}`;
+      // ✅ id မပါရင် လုံးဝ မထည့်
+      const productId = product.id ?? product._id ?? null;
+      if (!productId) {
+        console.warn("[cart] product has no id — not adding", product);
+        return state;
+      }
+
+      // ✅ undefined ကို null ပြောင်း (key နဲ့ JSON အတွက်)
+      const normalizedSize = size ?? null;
+      const normalizedColor = color ?? null;
+
+      const key = [
+        productId,
+        normalizedSize ?? "nosize",
+        normalizedColor ?? "nocolor",
+      ].join("-");
+
       const existing = state.find((item) => item.key === key);
 
       if (existing) {
@@ -31,14 +47,14 @@ function cartReducer(state, action) {
         ...state,
         {
           key,
-          id: product.id,
-          slug: product.slug,           // ✅ add slug
+          id: productId,
+          slug: product.slug ?? null,
           name: product.name,
           price: product.price,
           currency: product.currency,
           image: product.image,
-          size,
-          color,
+          size: normalizedSize,   // ✅ null (undefined မဟုတ်)
+          color: normalizedColor, // ✅ null
           qty,
         },
       ];
@@ -58,8 +74,27 @@ function cartReducer(state, action) {
     case "CLEAR":
       return [];
 
-    case "HYDRATE":
-      return action.payload;
+    case "HYDRATE": {
+      // ✅ ဟောင်းတဲ့ cart data ကို sanitize
+      const incoming = Array.isArray(action.payload)
+        ? action.payload
+        : [];
+      return incoming
+        .filter((item) => item && item.id)
+        .map((item) => ({
+          ...item,
+          size: item.size ?? null,
+          color: item.color ?? null,
+          qty: Number(item.qty) || 1,
+          key:
+            item.key ||
+            [
+              item.id,
+              item.size ?? "nosize",
+              item.color ?? "nocolor",
+            ].join("-"),
+        }));
+    }
 
     default:
       return state;
@@ -86,8 +121,16 @@ export function CartProvider({ children }) {
     }
   }, [items]);
 
-  const add = (product, { size, color, qty = 1 }) =>
-    dispatch({ type: "ADD", payload: { product, size, color, qty } });
+  const add = (product, options = {}) =>
+    dispatch({
+      type: "ADD",
+      payload: {
+        product,
+        size: options.size ?? null,
+        color: options.color ?? null,
+        qty: options.qty ?? 1,
+      },
+    });
 
   const remove = (key) => dispatch({ type: "REMOVE", payload: { key } });
 
@@ -96,10 +139,10 @@ export function CartProvider({ children }) {
 
   const clear = () => dispatch({ type: "CLEAR" });
 
-  const count = items.reduce((sum, item) => sum + item.qty, 0);
+  const count = items.reduce((sum, item) => sum + (item.qty || 0), 0);
 
   const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.qty,
+    (sum, item) => sum + (item.price || 0) * (item.qty || 0),
     0
   );
 

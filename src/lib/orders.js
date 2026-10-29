@@ -24,6 +24,25 @@ export async function createOrder({
     headers.Authorization = `Bearer ${session.access_token}`;
   }
 
+  // ✅ Cart item fields ကို normalize — id/qty ကို အလွယ်တကူ ခေါ်နိုင်
+  const normalizedItems = (items || [])
+    .map((it) => {
+      const productId = it.productId ?? it.id ?? null;
+      const quantity = Number(it.quantity ?? it.qty ?? 0);
+
+      return {
+        productId,
+        size: it.size ?? null,
+        color: it.color ?? null,
+        quantity,
+      };
+    })
+    .filter((it) => it.productId && it.quantity > 0);
+
+  if (normalizedItems.length === 0) {
+    throw new Error("Cart is empty — nothing to order.");
+  }
+
   const res = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-order`,
     {
@@ -38,12 +57,7 @@ export async function createOrder({
           city: customer.city || "Yangon",
           notes: customer.notes || "",
         },
-        items: items.map((it) => ({
-          productId: it.id,
-          size: it.size,
-          color: it.color,
-          quantity: it.qty,
-        })),
+        items: normalizedItems,
         deliveryMethod: delivery,
         paymentMethod: payment,
         paymentProofUrl,
@@ -55,7 +69,12 @@ export async function createOrder({
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.error || "Order failed. Please try again.");
+    // Edge Function က error ကို data.error (သို့) data.message မှာ ပို့နိုင်
+    const message =
+      data?.error ||
+      data?.message ||
+      `Order failed (${res.status}). Please try again.`;
+    throw new Error(message);
   }
 
   return {
@@ -138,8 +157,8 @@ export async function getOrderByNumber(orderNumber) {
       id: it.id,
       name: it.product_name,
       image: it.product_image,
-      size: it.size,
-      color: it.color,
+      size: it.size ?? null,
+      color: it.color ?? null,
       price: it.price,
       quantity: it.quantity,
     })),
@@ -197,8 +216,8 @@ export async function sendOrderEmail(order) {
           paymentMethod: order.paymentMethod,
           items: (order.items || []).map((it) => ({
             name: it.name,
-            size: it.size,
-            color: it.color,
+            size: it.size ?? null,
+            color: it.color ?? null,
             price: it.price,
             quantity: it.quantity,
           })),
