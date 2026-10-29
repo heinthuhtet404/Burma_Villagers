@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import useScrollReveal from "../hooks/useScrollReveal";
+import { supabase } from "../lib/supabase";
 
 /* ============================================================
    DROP CONFIG — Coming Soon
@@ -44,6 +45,8 @@ export default function NewDrop() {
 
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const { days, hours, minutes, seconds, isLive } = useCountdown(
     NEXT_DROP.releaseDate
@@ -51,11 +54,33 @@ export default function NewDrop() {
 
   const pad = (n) => String(n).padStart(2, "0");
 
-  const handleNotify = (e) => {
+  const handleNotify = async (e) => {
     e.preventDefault();
-    if (!email.trim()) return;
-    // TODO: save to Supabase newsletter table (later)
-    setSubmitted(true);
+
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const { error: sbError } = await supabase
+        .from("newsletter_subscribers")
+        .insert({ email: trimmed, source: "new-drop" });
+
+      // 23505 = unique violation (email ရှိပြီးသား)
+      // ဒါကို error မပြဘဲ success ပြမယ်
+      if (sbError && sbError.code !== "23505") {
+        throw sbError;
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Subscribe failed:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -111,9 +136,9 @@ export default function NewDrop() {
       </div>
 
       {/* ============================================
-          COUNTDOWN
+          COUNTDOWN (commented out — လိုအပ်ရင် ပြန်ဖွင့်ပါ)
           ============================================ */}
-      <div
+      {/* <div
         ref={countdownRef}
         className="container drop-coming-countdown reveal"
       >
@@ -150,7 +175,7 @@ export default function NewDrop() {
             year: "numeric",
           })}
         </p>
-      </div>
+      </div> */}
 
       {/* ============================================
           TEASER — Editorial
@@ -205,10 +230,7 @@ export default function NewDrop() {
               </p>
             </div>
           ) : (
-            <form
-              className="drop-notify-form"
-              onSubmit={handleNotify}
-            >
+            <form className="drop-notify-form" onSubmit={handleNotify}>
               <input
                 type="email"
                 placeholder="EMAIL ADDRESS"
@@ -216,14 +238,17 @@ export default function NewDrop() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={submitting}
               />
               <button
                 type="submit"
                 className="btn btn-primary drop-notify-btn"
+                disabled={submitting}
               >
-                <span>NOTIFY ME</span>
+                <span>{submitting ? "SENDING…" : "NOTIFY ME"}</span>
                 <span className="drop-notify-arrow">→</span>
               </button>
+              {error && <p className="drop-notify-error">{error}</p>}
             </form>
           )}
         </div>

@@ -36,16 +36,6 @@ export default function ProductCard({ product }) {
         <p className="product-card-price">
           {formatPrice(product.price, product.currency)}
         </p>
-
-        <div className="product-card-colors">
-          {product.colors.map((c) => (
-            <span
-              key={c}
-              className="product-card-swatch"
-              style={{ background: c }}
-            />
-          ))}
-        </div>
       </div>
     </Link>
   );

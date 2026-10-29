@@ -84,15 +84,15 @@ export default function OrderConfirmation() {
 
   const isCod = order.paymentMethod === "cod";
   const paymentLabel =
-    PAYMENT_CONFIG[order.paymentMethod]?.label ||
+    PAYMENT_CONFIG?.[order.paymentMethod]?.label ||
     order.paymentMethod ||
     "—";
 
-  const items = order.items || [];
+  const items = Array.isArray(order.items) ? order.items : [];
 
   const total = Number(order.total) || 0;
   const depositAmount = Number(order.depositAmount) || 0;
-  const remainingAmount = total - depositAmount;
+  const remainingAmount = Math.max(total - depositAmount, 0);
 
   return (
     <section className="confirmation">
@@ -113,7 +113,6 @@ export default function OrderConfirmation() {
           within 24 hours.
         </p>
 
-        {/* Payment status banner */}
         <div className="confirmation-status">
           <div className="confirmation-status-icon">⏳</div>
           <div>
@@ -126,7 +125,6 @@ export default function OrderConfirmation() {
           </div>
         </div>
 
-        {/* Order info grid */}
         <div className="confirmation-grid">
           <div className="confirmation-block">
             <p className="confirmation-block-key">ORDER №</p>
@@ -152,7 +150,6 @@ export default function OrderConfirmation() {
           </div>
         </div>
 
-        {/* COD deposit info */}
         {isCod && depositAmount > 0 && (
           <div className="confirmation-deposit">
             <p className="confirmation-deposit-title">
@@ -171,7 +168,6 @@ export default function OrderConfirmation() {
           </div>
         )}
 
-        {/* Payment proof */}
         {order.paymentProofUrl && (
           <div className="confirmation-proof">
             <p className="confirmation-proof-title">
@@ -194,7 +190,6 @@ export default function OrderConfirmation() {
           </div>
         )}
 
-        {/* Items */}
         {items.length > 0 && (
           <div className="confirmation-items">
             <p className="confirmation-items-title">
@@ -202,47 +197,52 @@ export default function OrderConfirmation() {
             </p>
 
             <ul className="confirmation-items-list">
-              {items.map((item, idx) => (
-                <li
-                  key={item.id || `${item.name}-${idx}`}
-                  className="confirmation-item"
-                >
-                  <div className="confirmation-item-image">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <span className="confirmation-item-placeholder" />
-                    )}
-                  </div>
-                  <div className="confirmation-item-info">
-                    <p className="confirmation-item-name">
-                      {item.name || "Item"}
+              {items.map((item, idx) => {
+                const metaParts = [];
+                if (item.size) metaParts.push(`SIZE ${item.size}`);
+                if (item.color) metaParts.push(`COLOR ${item.color}`);
+                metaParts.push(`QTY ${item.quantity ?? 1}`);
+
+                const lineTotal =
+                  (Number(item.price) || 0) *
+                  (Number(item.quantity) || 1);
+
+                return (
+                  <li
+                    key={item.id ?? `item-${idx}`}
+                    className="confirmation-item"
+                  >
+                    <div className="confirmation-item-image">
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.name || "Item"}
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <span className="confirmation-item-placeholder" />
+                      )}
+                    </div>
+                    <div className="confirmation-item-info">
+                      <p className="confirmation-item-name">
+                        {item.name || "Item"}
+                      </p>
+                      <p className="confirmation-item-meta">
+                        {metaParts.join(" · ")}
+                      </p>
+                    </div>
+                    <p className="confirmation-item-price">
+                      {formatPrice(lineTotal, "MMK")}
                     </p>
-                    <p className="confirmation-item-meta">
-                      {item.size ? `SIZE ${item.size} · ` : ""}
-                      QTY {item.quantity || 1}
-                    </p>
-                  </div>
-                  <p className="confirmation-item-price">
-                    {formatPrice(
-                      (Number(item.price) || 0) *
-                        (Number(item.quantity) || 1),
-                      "MMK"
-                    )}
-                  </p>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
 
-        {/* Actions */}
         <div className="confirmation-actions">
           {user ? (
             <Link to="/account/orders" className="btn btn-primary">
@@ -258,7 +258,6 @@ export default function OrderConfirmation() {
           </Link>
         </div>
 
-        {/* Guest signup prompt */}
         {!user && (
           <div className="confirmation-signup">
             <p>
